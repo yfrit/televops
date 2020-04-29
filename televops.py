@@ -31,9 +31,9 @@ def daily(update, context):
     body = ""
     tasks = client.get_tasks()
     for owner, tasks in tasks.items():
+        body += owner + ' is working on:\n'
+        body += '```\n'
         if tasks:
-            body += owner + ' is working on:\n'
-            body += '```\n'
             for task in tasks:
                 body += f"{task.id}. {task.name}.\n"
         else:

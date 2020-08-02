@@ -1,4 +1,5 @@
 import logging
+import os
 import telegram.ext
 
 from telegram.ext import CommandHandler
@@ -6,9 +7,14 @@ from telegram.ext import Updater
 from devops_client import Client
 from devops_client import Task
 from datetime import datetime
+from dotenv import load_dotenv
+
+# load env file
+load_dotenv()
 
 # fetch updater and job queue
 print("Starting bot...")
+updater = Updater(token=os.getenv("TELEGRAM_TOKEN"),
                   use_context=True)
 dispatcher = updater.dispatcher
 

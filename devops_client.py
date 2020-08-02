@@ -3,6 +3,7 @@ from msrest.authentication import BasicAuthentication
 from azure.devops.v5_1.work_item_tracking.models import Wiql
 
 import pprint
+import os
 
 
 class Task:
@@ -23,7 +24,7 @@ class Client:
         self.colaborators = collaborators
 
         # Fill in with your personal access token and org URL
-        personal_access_token = 'l2hu2eslcn6vsspxknlpcxkmt5aedxsh43gdpg65y2h5xie54s4a'
+        personal_access_token = os.getenv("DEVOPS_TOKEN")
         organization_url = 'https://dev.azure.com/YfritGames'
 
         # Create a connection to the org

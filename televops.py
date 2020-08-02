@@ -7,6 +7,7 @@ from telegram.ext import Updater
 from devops_client import Client
 from devops_client import Task
 from datetime import datetime
+from datetime import timezone
 from dotenv import load_dotenv
 
 # load env file
@@ -35,13 +36,15 @@ def daily(update, context):
     heading += 'Here are the current statuses:\n\n'
 
     body = ""
-    tasks = client.get_tasks()
+    tasks = client.get_tasks(include_completed=True)
+    
     for owner, tasks in tasks.items():
         body += owner + ' is working on:\n'
         body += '```\n'
         if tasks:
             for task in tasks:
-                body += f"{task.id}. {task.name}.\n"
+                body += f"{task.id}. {task.name} ({task.state})."
+                body += "\n"
         else:
             body += 'No tasks in progress.\n'
         body += '```' + '\n'

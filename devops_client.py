@@ -4,13 +4,15 @@ from azure.devops.v5_1.work_item_tracking.models import Wiql
 
 import pprint
 import os
+import datetime
 
 
 class Task:
-    def __init__(self, id, name, owner):
+    def __init__(self, id, name, owner, state):
         self.id = id
         self.name = name
         self.owner = owner
+        self.state = state
 
     def __str__(self):
         return f"Task {self.id}: {self.name} ({self.owner})"
@@ -33,7 +35,11 @@ class Client:
 
         self.wit_client = connection.clients.get_work_item_tracking_client()
 
-    def get_tasks_by_user(self, username, state="In Progress"):
+    def get_tasks_by_user(self, username, state="In Progress", date_range=False):
+        date_range_option = ""
+        if date_range:
+            yesterday = datetime.date.today() - datetime.timedelta(days=1)
+            date_range_option = f'and [System.ChangedDate] >= "{yesterday}"'
         query = f"""
             select [System.Id],
                 [System.Title],
@@ -42,6 +48,7 @@ class Client:
             where [System.WorkItemType] = 'Task'
             and [System.State] = "{state}"
             and [System.AssignedTo] = '{username}'
+            {date_range_option}
             order by [System.ChangedDate] desc"""
         wiql = Wiql(query=query)
 
@@ -57,13 +64,18 @@ class Client:
                 id = work_item.id
                 name = work_item.fields['System.Title']
                 owner = work_item.fields['System.AssignedTo']['displayName']
-                results.append(Task(id=id, name=name, owner=owner))
+                state = work_item.fields['System.State']
+                results.append(Task(id=id, name=name, owner=owner, state=state))
 
         return results
 
-    def get_tasks(self):
+    def get_tasks(self, include_completed=False):
         tasks = {}
         for c in self.colaborators:
-            tasks[c] = self.get_tasks_by_user(c)
+            t = self.get_tasks_by_user(c)
+            if include_completed:
+                t += self.get_tasks_by_user(c, state="Done", date_range=True)
+            t = sorted(t, key=lambda task: task.id)
+            tasks[c] = t
 
         return tasks

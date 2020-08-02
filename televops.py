@@ -8,7 +8,7 @@ from devops_client import Task
 from datetime import datetime
 
 # fetch updater and job queue
-updater = Updater(token='892133286:AAEVE0satdhieizcAlzweHnoFoG1nqj9HqE',
+print("Starting bot...")
                   use_context=True)
 dispatcher = updater.dispatcher
 
@@ -55,3 +55,4 @@ daily_handler = CommandHandler('daily', daily)
 dispatcher.add_handler(daily_handler)
 
 updater.start_polling()
+print("Bot started and listening for commands.")

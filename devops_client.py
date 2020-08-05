@@ -39,7 +39,7 @@ class Client:
         date_range_option = ""
         if date_range:
             yesterday = datetime.date.today() - datetime.timedelta(days=1)
-            date_range_option = f'and [System.ChangedDate] >= "{yesterday}"'
+            date_range_option = f'and [System.ChangedDate] > "{yesterday}"'
         query = f"""
             select [System.Id],
                 [System.Title],

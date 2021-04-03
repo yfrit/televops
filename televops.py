@@ -44,7 +44,7 @@ def daily(update, context):
                 parent = task.parent
                 if last_parent != parent.id:
                     last_parent = parent.id
-                    body += f"├── {parent.id}. {parent.name} - ({parent.state})"  # noqa
+                    body += f"├── {parent.id}. {parent.name}"
                     body += "\n"
 
                 body += f"│   ├── {task.id}. {task.name} - ({task.state})"

@@ -5,6 +5,9 @@ from azure.devops.connection import Connection
 from azure.devops.v5_1.work_item_tracking.models import Wiql
 from msrest.authentication import BasicAuthentication
 
+# constants
+PARENT_TYPES = ["Product Backlog Item", "Bug"]
+
 
 class Task:
     def __init__(self, id, name, owner, state, parent=None):
@@ -65,8 +68,7 @@ class Client:
             for res in wiql_results:
                 wid = res.target.id
                 work_item = self.wit_client.get_work_item(wid)
-                if work_item.fields[
-                        "System.WorkItemType"] == "Product Backlog Item":
+                if work_item.fields["System.WorkItemType"] in PARENT_TYPES:
                     return work_item
 
     def get_tasks_by_user(self,

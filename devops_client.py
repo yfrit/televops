@@ -43,18 +43,12 @@ class Client:
 
         self._wit_client = connection.clients.get_work_item_tracking_client()
 
-        # caching object
-        self._parent_map = {}
-
     def _query_by_wiql(self, query, top=100):
         wiql = Wiql(query=query)
 
         return self._wit_client.query_by_wiql(wiql, top=top)
 
     def _get_parent_by_task_id(self, task_id):
-        if task_id in self._parent_map:
-            return self._parent_map[task_id]
-
         query = f"""
                 SELECT
                 [System.Id],
@@ -82,8 +76,6 @@ class Client:
                 wid = res.target.id
                 work_item = self._wit_client.get_work_item(wid)
                 if work_item.fields['System.WorkItemType'] in PARENT_TYPES:
-                    self._parent_map[task_id] = work_item
-
                     return work_item
 
     async def _get_tasks_by_user(self, username):

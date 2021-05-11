@@ -187,9 +187,14 @@ class Client:
         # get average
         average = done_count / total_days
 
-        # calculate projected date
+        # calculate projected day
         days_left = not_done_count / average
         projected_date = today + datetime.timedelta(days=math.ceil(days_left))
+
+        # set projected date to closest sunday (6 in datetime)
+        # this is hardcoded to our org's development process / weekly burnup
+        projected_date = projected_date + datetime.timedelta(
+            (6 - projected_date.weekday()) % 7)
 
         # calculate increased scope by matching created date with sprint start
         increased_scope = 0

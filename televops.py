@@ -29,10 +29,10 @@ def daily(update, context):
 
     heading = f'{datetime.now()}\n'
     heading += "Welcome to today's Yfrt's Televops Daily Meeting!\n\n"
-    heading += f"We are currently sitting at {scope['done']}/{scope['total']} ({completed}%) of work items completed.\n\n"  # noqa
+    heading += f"We are currently sitting at {scope['done']}/{scope['total']} ({completed}%) work items completed.\n\n"  # noqa
 
     body = ""
-    tasks = client.get_tasks(include_completed=True)
+    tasks = client.get_tasks()
 
     for owner, tasks in tasks.items():
         body += owner + ' is working on:\n'

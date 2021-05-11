@@ -3,13 +3,9 @@ import os
 from datetime import datetime
 
 import telegram.ext
-from dotenv import load_dotenv
 from telegram.ext import CommandHandler, Updater
 
 from devops_client import Client
-
-# load env file
-load_dotenv()
 
 # fetch updater and job queue
 print("Starting bot...")
@@ -28,8 +24,12 @@ client = Client(colaborators)
 
 # set the function command callback for the daily
 def daily(update, context):
+    scope = client.get_current_scope()
+    completed = int(100 * scope['completed'])
+
     heading = f'{datetime.now()}\n'
     heading += "Welcome to today's Yfrt's Televops Daily Meeting!\n\n"
+    heading += f"We are currently sitting at {scope['done']}/{scope['total']} ({completed}%) of work items completed.\n\n"  # noqa
 
     body = ""
     tasks = client.get_tasks(include_completed=True)
@@ -57,6 +57,8 @@ def daily(update, context):
 
     msg = str(heading + body).replace('-', '\-') \
                              .replace('.', '\.') \
+                             .replace('(', '\(') \
+                             .replace(')', '\)') \
                              .replace('!', '\!') # noqa
 
     context.bot.send_message(chat_id=update.effective_chat.id,

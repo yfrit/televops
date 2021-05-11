@@ -3,7 +3,11 @@ import os
 
 from azure.devops.connection import Connection
 from azure.devops.v5_1.work_item_tracking.models import Wiql
+from dotenv import load_dotenv
 from msrest.authentication import BasicAuthentication
+
+# load env file
+load_dotenv()
 
 # constants
 PARENT_TYPES = ["Product Backlog Item", "Bug"]
@@ -38,7 +42,18 @@ class Client:
 
         self.wit_client = connection.clients.get_work_item_tracking_client()
 
+        # caching object
+        self.parent_map = {}
+
+    def query_by_wiql(self, query, top=100):
+        wiql = Wiql(query=query)
+
+        return self.wit_client.query_by_wiql(wiql, top=top)
+
     def get_parent_by_task_id(self, task_id):
+        if task_id in self.parent_map:
+            return self.parent_map[task_id]
+
         query = f"""
                 SELECT
                 [System.Id],
@@ -57,10 +72,7 @@ class Client:
         ORDER BY [System.Id]
         MODE (Recursive, ReturnMatchingChildren)
         """ # noqa
-        wiql = Wiql(query=query)
-
-        wiql_results = self.wit_client.query_by_wiql(
-            wiql, top=30).work_item_relations
+        wiql_results = self.query_by_wiql(query, top=30).work_item_relations
 
         if wiql_results:
             # WIQL query gives a WorkItemReference with ID only
@@ -69,6 +81,8 @@ class Client:
                 wid = res.target.id
                 work_item = self.wit_client.get_work_item(wid)
                 if work_item.fields["System.WorkItemType"] in PARENT_TYPES:
+                    self.parent_map[task_id] = work_item
+
                     return work_item
 
     def get_tasks_by_user(self,
@@ -79,6 +93,7 @@ class Client:
         if date_range:
             yesterday = datetime.date.today() - datetime.timedelta(days=1)
             date_range_option = f'and [System.ChangedDate] > "{yesterday}"'
+
         query = f"""
             select [System.Id],
                 [System.Title],
@@ -89,9 +104,7 @@ class Client:
             and [System.AssignedTo] = '{username}'
             {date_range_option}
             order by [System.ChangedDate] desc"""
-        wiql = Wiql(query=query)
-
-        wiql_results = self.wit_client.query_by_wiql(wiql, top=30).work_items
+        wiql_results = self.query_by_wiql(query, top=30).work_items
 
         results = []
         if wiql_results:
@@ -118,6 +131,31 @@ class Client:
                 child.parent = parent
                 results.append(child)
 
+        return results
+
+    def get_current_scope(self):
+        # this is hardcoded since it's very project specific for us
+        # our SCRUMBAN scope is defined by all of the prioritized
+        # work items, which all receive a tag with the name of our
+        # current release
+
+        # fetch work that is done
+        qid = "29ee26af-1b5e-42b6-9a62-00f023530620"
+        done_results = list(self.wit_client.query_by_id(qid).work_items)
+        done_count = len(done_results)
+
+        # fetch work that is not done
+        qid = "8ea659e8-04c4-41af-9d83-d763b3679737"
+        not_done_results = list(self.wit_client.query_by_id(qid).work_items)
+        not_done_count = len(not_done_results)
+
+        # TODO: use the objects for cool things, for now, too lazy
+        # maye completion dates to plot estimated project delivery
+        results = {
+            "done": done_count,
+            "total": done_count + not_done_count,
+            "completed": done_count / (done_count + not_done_count)
+        }
         return results
 
     def get_tasks(self, include_completed=False):

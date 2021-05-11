@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import os
 
@@ -10,7 +11,7 @@ from msrest.authentication import BasicAuthentication
 load_dotenv()
 
 # constants
-PARENT_TYPES = ["Product Backlog Item", "Bug"]
+PARENT_TYPES = ['Product Backlog Item', 'Bug']
 
 
 class Task:
@@ -22,7 +23,7 @@ class Task:
         self.parent = parent
 
     def __str__(self):
-        return f"Task {self.id}: {self.name} ({self.owner})"
+        return f'Task {self.id}: {self.name} ({self.owner})'
 
     def __repr__(self):
         return self.__str__()
@@ -30,29 +31,29 @@ class Task:
 
 class Client:
     def __init__(self, collaborators):
-        self.colaborators = collaborators
+        self._colaborators = collaborators
 
         # Fill in with your personal access token and org URL
-        personal_access_token = os.getenv("DEVOPS_TOKEN")
+        personal_access_token = os.getenv('DEVOPS_TOKEN')
         organization_url = 'https://dev.azure.com/YfritGames'
 
         # Create a connection to the org
         credentials = BasicAuthentication('', personal_access_token)
         connection = Connection(base_url=organization_url, creds=credentials)
 
-        self.wit_client = connection.clients.get_work_item_tracking_client()
+        self._wit_client = connection.clients.get_work_item_tracking_client()
 
         # caching object
-        self.parent_map = {}
+        self._parent_map = {}
 
-    def query_by_wiql(self, query, top=100):
+    def _query_by_wiql(self, query, top=100):
         wiql = Wiql(query=query)
 
-        return self.wit_client.query_by_wiql(wiql, top=top)
+        return self._wit_client.query_by_wiql(wiql, top=top)
 
-    def get_parent_by_task_id(self, task_id):
-        if task_id in self.parent_map:
-            return self.parent_map[task_id]
+    def _get_parent_by_task_id(self, task_id):
+        if task_id in self._parent_map:
+            return self._parent_map[task_id]
 
         query = f"""
                 SELECT
@@ -72,45 +73,43 @@ class Client:
         ORDER BY [System.Id]
         MODE (Recursive, ReturnMatchingChildren)
         """ # noqa
-        wiql_results = self.query_by_wiql(query, top=30).work_item_relations
+        wiql_results = self._query_by_wiql(query, top=30).work_item_relations
 
         if wiql_results:
             # WIQL query gives a WorkItemReference with ID only
             # => we get the corresponding WorkItem from id
             for res in wiql_results:
                 wid = res.target.id
-                work_item = self.wit_client.get_work_item(wid)
-                if work_item.fields["System.WorkItemType"] in PARENT_TYPES:
-                    self.parent_map[task_id] = work_item
+                work_item = self._wit_client.get_work_item(wid)
+                if work_item.fields['System.WorkItemType'] in PARENT_TYPES:
+                    self._parent_map[task_id] = work_item
 
                     return work_item
 
-    def get_tasks_by_user(self,
-                          username,
-                          state="In Progress",
-                          date_range=False):
-        date_range_option = ""
-        if date_range:
-            yesterday = datetime.date.today() - datetime.timedelta(days=1)
-            date_range_option = f'and [System.ChangedDate] > "{yesterday}"'
-
+    async def _get_tasks_by_user(self, username):
+        yesterday = datetime.date.today() - datetime.timedelta(days=1)
         query = f"""
             select [System.Id],
                 [System.Title],
                 [System.State]
             from WorkItems
             where [System.WorkItemType] = 'Task'
-            and [System.State] = "{state}"
-            and [System.AssignedTo] = '{username}'
-            {date_range_option}
+            and (
+                [System.State] = 'Done'
+                and [System.ChangedDate] > '{yesterday}'
+                and [System.AssignedTo] = '{username}'
+            ) or (
+                [System.State] = 'In Progress'
+                and [System.AssignedTo] = '{username}'
+            )
             order by [System.ChangedDate] desc"""
-        wiql_results = self.query_by_wiql(query, top=30).work_items
+        wiql_results = self._query_by_wiql(query, top=30).work_items
 
         results = []
         if wiql_results:
             # WIQL query gives a WorkItemReference with ID only
             # => we get the corresponding WorkItem from id
-            work_items = (self.wit_client.get_work_item(int(res.id))
+            work_items = (self._wit_client.get_work_item(int(res.id))
                           for res in wiql_results)
             for work_item in work_items:
                 # create child
@@ -121,7 +120,7 @@ class Client:
                 child = Task(id=wid, name=name, owner=owner, state=state)
 
                 # get parent
-                story_item = self.get_parent_by_task_id(wid)
+                story_item = self._get_parent_by_task_id(wid)
                 wid = story_item.id
                 name = story_item.fields['System.Title']
                 owner = story_item.fields['System.AssignedTo']['displayName']
@@ -131,7 +130,7 @@ class Client:
                 child.parent = parent
                 results.append(child)
 
-        return results
+        return (username, results)
 
     def get_current_scope(self):
         # this is hardcoded since it's very project specific for us
@@ -140,33 +139,40 @@ class Client:
         # current release
 
         # fetch work that is done
-        qid = "29ee26af-1b5e-42b6-9a62-00f023530620"
-        done_results = list(self.wit_client.query_by_id(qid).work_items)
+        qid = '29ee26af-1b5e-42b6-9a62-00f023530620'
+        done_results = list(self._wit_client.query_by_id(qid).work_items)
         done_count = len(done_results)
 
         # fetch work that is not done
-        qid = "8ea659e8-04c4-41af-9d83-d763b3679737"
-        not_done_results = list(self.wit_client.query_by_id(qid).work_items)
+        qid = '8ea659e8-04c4-41af-9d83-d763b3679737'
+        not_done_results = list(self._wit_client.query_by_id(qid).work_items)
         not_done_count = len(not_done_results)
 
         # TODO: use the objects for cool things, for now, too lazy
         # maye completion dates to plot estimated project delivery
         results = {
-            "done": done_count,
-            "total": done_count + not_done_count,
-            "completed": done_count / (done_count + not_done_count)
+            'done': done_count,
+            'total': done_count + not_done_count,
+            'completed': done_count / (done_count + not_done_count)
         }
+
         return results
 
-    def get_tasks(self, include_completed=False):
-        tasks = {}
-        for c in self.colaborators:
-            t = self.get_tasks_by_user(c)
+    async def _get_tasks(self):
+        task_map = {}
 
-            if include_completed:
-                t += self.get_tasks_by_user(c, state="Done", date_range=True)
+        # gather a call for each collaborator
+        results = await asyncio.gather(*[
+            self._get_tasks_by_user(colaborator)
+            for colaborator in self._colaborators
+        ])
 
-            t = sorted(t, key=lambda task: task.id)
-            tasks[c] = t
+        # merge all results into a single sorted task map
+        for collaborator, tasks in results:
+            tasks = sorted(tasks, key=lambda task: task.id)
+            task_map[collaborator] = tasks
 
-        return tasks
+        return task_map
+
+    def get_tasks(self):
+        return asyncio.run(self._get_tasks())

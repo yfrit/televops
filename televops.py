@@ -24,15 +24,23 @@ client = Client(colaborators)
 
 # set the function command callback for the daily
 def daily(update, context):
+    # fetch scope info for heading
     scope = client.get_current_scope()
-    completed = int(100 * scope['completed'])
+    completed = '{:.2f}'.format(100 * scope['completed'])
 
+    # present heading
     heading = f'{datetime.now()}\n'
     heading += "Welcome to today's Yfrt's Televops Daily Meeting!\n\n"
-    heading += f"We are currently sitting at {scope['done']}/{scope['total']} ({completed}%) work items completed.\n\n"  # noqa
+    heading += f"Current iteration:\n"  # noqa
+    heading += "```\n"
+    heading += f"├── Stories/Bugs: {scope['done']}/{scope['total']} ({completed}%)\n"  # noqa
+    heading += f"├── Increased Scope: {scope['increased_scope']}\n"
+    heading += f"├── Projected Date: {scope['projected_date']}/{scope['release_date']}\n"  # noqa
+    heading += '```' + '\n'
 
-    body = ""
+    # fetch and present body info
     tasks = client.get_tasks()
+    body = ""
 
     for owner, tasks in tasks.items():
         body += owner + ' is working on:\n'

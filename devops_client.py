@@ -165,7 +165,16 @@ class Client:
                 closed_date_str, '%Y-%m-%dT%H:%M:%S.%fZ').date()
             closed_date_str = str(closed_date)
 
-            # store created dates
+            # store created dates from done items
+            created_date = datetime.datetime.strptime(
+                work_item.fields['System.CreatedDate'],
+                '%Y-%m-%dT%H:%M:%S.%fZ').date()
+            created_dates.append(str(created_date))
+
+        # store created dates from not done items
+        work_items = (self._wit_client.get_work_item(int(res.id))
+                      for res in not_done_results)
+        for work_item in work_items:
             created_date = datetime.datetime.strptime(
                 work_item.fields['System.CreatedDate'],
                 '%Y-%m-%dT%H:%M:%S.%fZ').date()
@@ -182,10 +191,10 @@ class Client:
         days_left = not_done_count / average
         projected_date = today + datetime.timedelta(days=math.ceil(days_left))
 
-        # calculate increased scope
+        # calculate increased scope by matching created date with sprint start
         increased_scope = 0
         for created_date in created_dates:
-            if created_date != str(first_date):
+            if created_date > str(first_date):
                 increased_scope += 1
 
         results = {

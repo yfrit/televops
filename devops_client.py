@@ -58,6 +58,19 @@ class Client:
         self._task_builder = TaskBuilder()
         self._work_client = connection.clients.get_work_client()
 
+        # caching objects
+        self._work_item_map = {}
+
+    def _get_work_item(self, id):
+        if id in self._work_item_map:
+            return self._work_item_map[id]
+
+        # work around for unhashable WorkItem class
+        work_item = self._wit_client.get_work_item(id)
+        self._work_item_map[id] = work_item
+
+        return work_item
+
     def _query_by_wiql(self, query, top=100):
         wiql = Wiql(query=query)
 
@@ -88,7 +101,7 @@ class Client:
             # => we get the corresponding WorkItem from id
             for res in wiql_results:
                 wid = res.target.id
-                work_item = self._wit_client.get_work_item(wid)
+                work_item = self._get_work_item(wid)
                 if work_item.fields['System.WorkItemType'] in PARENT_TYPES:
                     return work_item
 
@@ -115,7 +128,7 @@ class Client:
         if wiql_results:
             # WIQL query gives a WorkItemReference with ID only
             # => we get the corresponding WorkItem from id
-            work_items = (self._wit_client.get_work_item(int(res.id))
+            work_items = (self._get_work_item(int(res.id))
                           for res in wiql_results)
             for work_item in work_items:
                 # create child
@@ -135,16 +148,38 @@ class Client:
         # our SCRUMBAN scope is defined by all of the prioritized
         # work items, which all receive a tag with the name of our
         # current release
+        qid = 'bda7bbb2-f777-4b1f-b925-effda36aba71'
+        done_count = 0
+        not_done_count = 0
+        created_dates = []
+        results = self._wit_client.query_by_id(qid).work_items
+        work_items = [self._get_work_item(int(res.id)) for res in results]
 
-        # fetch work that is done
-        qid = '29ee26af-1b5e-42b6-9a62-00f023530620'
-        done_results = list(self._wit_client.query_by_id(qid).work_items)
-        done_count = len(done_results)
+        for work_item in work_items:
+            state = work_item.fields['System.State']
+            if state == 'Done':
+                # get completion dates and match them with sprint start date
+                closed_date_str = work_item.fields[
+                    'Microsoft.VSTS.Common.ClosedDate']
+                closed_date = datetime.datetime.strptime(
+                    closed_date_str, '%Y-%m-%dT%H:%M:%S.%fZ').date()
+                closed_date_str = str(closed_date)
 
-        # fetch work that is not done
-        qid = '8ea659e8-04c4-41af-9d83-d763b3679737'
-        not_done_results = list(self._wit_client.query_by_id(qid).work_items)
-        not_done_count = len(not_done_results)
+                # store created dates from done items
+                created_date = datetime.datetime.strptime(
+                    work_item.fields['System.CreatedDate'],
+                    '%Y-%m-%dT%H:%M:%S.%fZ').date()
+                created_dates.append(str(created_date))
+
+                done_count += 1
+            else:
+                # store created dates from not done items
+                created_date = datetime.datetime.strptime(
+                    work_item.fields['System.CreatedDate'],
+                    '%Y-%m-%dT%H:%M:%S.%fZ').date()
+                created_dates.append(str(created_date))
+
+                not_done_count += 1
 
         # get sprint start date to make comparisons
         team_context = TeamContext(project='Card Game', team='Card Game Team')
@@ -152,33 +187,6 @@ class Client:
             team_context, timeframe='current')[0]
         first_date = iteration.attributes.start_date.date()
         release_date = iteration.attributes.finish_date.date()
-
-        # get completion dates and match them with sprint start date
-        created_dates = []
-        work_items = (self._wit_client.get_work_item(int(res.id))
-                      for res in done_results)
-        for work_item in work_items:
-            # convert to datetime object
-            closed_date_str = work_item.fields[
-                'Microsoft.VSTS.Common.ClosedDate']
-            closed_date = datetime.datetime.strptime(
-                closed_date_str, '%Y-%m-%dT%H:%M:%S.%fZ').date()
-            closed_date_str = str(closed_date)
-
-            # store created dates from done items
-            created_date = datetime.datetime.strptime(
-                work_item.fields['System.CreatedDate'],
-                '%Y-%m-%dT%H:%M:%S.%fZ').date()
-            created_dates.append(str(created_date))
-
-        # store created dates from not done items
-        work_items = (self._wit_client.get_work_item(int(res.id))
-                      for res in not_done_results)
-        for work_item in work_items:
-            created_date = datetime.datetime.strptime(
-                work_item.fields['System.CreatedDate'],
-                '%Y-%m-%dT%H:%M:%S.%fZ').date()
-            created_dates.append(str(created_date))
 
         # get number of worked days
         today = datetime.datetime.now().date()

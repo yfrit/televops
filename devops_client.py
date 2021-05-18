@@ -32,18 +32,6 @@ class Task:
 
 
 class TaskBuilder():
-    fields = ['System.Title', 'System.AssignedTo', 'System.State']
-
-    def is_buildable(self, work_item):
-        for field in TaskBuilder.fields:
-            if field not in work_item.fields:
-                return False
-            else:
-                if not work_item.fields[field]:
-                    return False
-
-        return True
-
     def from_work_item(self, work_item):
         wid = work_item.id
         name = work_item.fields['System.Title']
@@ -70,19 +58,8 @@ class Client:
         self._task_builder = TaskBuilder()
         self._work_client = connection.clients.get_work_client()
 
-        # caching objects
-        self._work_item_map = {}
-
     def _get_work_item(self, id):
-        if id in self._work_item_map:
-            return self._work_item_map[id]
-
-        # if can be cached, cache it (will fuck up assignees but yeh)
-        work_item = self._wit_client.get_work_item(id)
-        if self._task_builder.is_buildable(work_item):
-            self._work_item_map[id] = work_item
-
-        return work_item
+        return self._wit_client.get_work_item(id)
 
     def _query_by_wiql(self, query, top=100):
         wiql = Wiql(query=query)

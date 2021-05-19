@@ -156,9 +156,16 @@ class Client:
                 closed_date_str = str(closed_date)
 
                 # store created dates from done items
-                created_date = datetime.datetime.strptime(
-                    work_item.fields['System.CreatedDate'],
-                    '%Y-%m-%dT%H:%M:%S.%fZ').date()
+                try:
+                    created_date = datetime.datetime.strptime(
+                        work_item.fields['System.CreatedDate'],
+                        '%Y-%m-%dT%H:%M:%S.%fZ').date()
+                except ValueError:
+                    # stupid azure devops omitting .0 floating points
+                    created_date = datetime.datetime.strptime(
+                        work_item.fields['System.CreatedDate'],
+                        '%Y-%m-%dT%H:%M:%SZ').date()
+
                 created_dates.append(str(created_date))
 
                 done_count += 1

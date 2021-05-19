@@ -49,7 +49,7 @@ def daily(update, context):
     completed = "{:.2f}".format(100 * scope["completed"])
 
     # present heading
-    heading += f"Current iteration:\n"  # noqa
+        heading += "Current iteration:\n"
     heading += "```\n"
     heading += f"├── Stories/Bugs: {scope['done']}/{scope['total']} ({completed}%)\n"  # noqa
     heading += f"├── Increased Scope: {scope['increased_scope']}\n"

@@ -1,5 +1,6 @@
 import logging
 import os
+import traceback
 from datetime import datetime
 
 import telegram.ext
@@ -38,48 +39,56 @@ def daily(update, context):
     working_text = "Working on daily request..."
     msg = prepare_message(str(heading + working_text))
 
-    # send message to show api is working
-    message = context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=msg,
-        parse_mode=telegram.ParseMode.MARKDOWN_V2)
+    try:
+        # send message to show api is working
+        message = context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=msg,
+            parse_mode=telegram.ParseMode.MARKDOWN_V2)
 
-    # fetch scope info for heading
-    scope = client.get_current_scope()
-    completed = "{:.2f}".format(100 * scope["completed"])
+        # fetch scope info for heading
+        scope = client.get_current_scope()
+        completed = "{:.2f}".format(100 * scope["completed"])
 
-    # present heading
+        # present heading
         heading += "Current iteration:\n"
-    heading += "```\n"
-    heading += f"├── Stories/Bugs: {scope['done']}/{scope['total']} ({completed}%)\n"  # noqa
-    heading += f"├── Increased Scope: {scope['increased_scope']}\n"
-    heading += f"├── Projected Date: {scope['projected_date']}/{scope['release_date']}\n"  # noqa
-    heading += "```" + "\n"
+        heading += "```\n"
+        heading += f"├── Stories/Bugs: {scope['done']}/{scope['total']} ({completed}%)\n"  # noqa
+        heading += f"├── Increased Scope: {scope['increased_scope']}\n"
+        heading += f"├── Projected Date: {scope['projected_date']}/{scope['release_date']}\n"  # noqa
+        heading += "```" + "\n"
 
-    # fetch and present body info
-    tasks = client.get_tasks()
-    body = ""
+        # fetch and present body info
+        tasks = client.get_tasks()
+        body = ""
 
-    for owner, tasks in tasks.items():
-        body += owner + " is working on:\n"
-        body += "```\n"
+        for owner, tasks in tasks.items():
+            body += owner + " is working on:\n"
+            body += "```\n"
 
-        if tasks:
-            last_parent = 0
-            for task in tasks:
-                parent = task.parent
-                if last_parent != parent.id:
-                    last_parent = parent.id
-                    body += f"├── {parent.id}. {parent.name}"
+            if tasks:
+                last_parent = 0
+                for task in tasks:
+                    parent = task.parent
+                    if last_parent != parent.id:
+                        last_parent = parent.id
+                        body += f"├── {parent.id}. {parent.name}"
+                        body += "\n"
+
+                    body += f"│   ├── {task.id}. {task.name} - ({task.state})"
                     body += "\n"
+            else:
+                body += "No tasks in progress.\n"
+            body += "```" + "\n"
 
-                body += f"│   ├── {task.id}. {task.name} - ({task.state})"
-                body += "\n"
-        else:
-            body += "No tasks in progress.\n"
+        body += "Please, type in your current status. Don't forget to include what you're doing, what you plan to do, and if you have any impediments!"  # noqa
+
+    except Exception:
+        body = "Could not fetch content from Azure Devops. Error trace: \n"
         body += "```" + "\n"
-
-    body += "Please, type in your current status. Don't forget to include what you're doing, what you plan to do, and if you have any impediments!"  # noqa
+        body += traceback.format_exc()
+        body += "```" + "\n"
+        body += "Check the Yfrit Televops environment for more information."
 
     # parse command characters
     msg = prepare_message(str(heading + body))

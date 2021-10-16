@@ -193,8 +193,12 @@ class Client:
         average = done_count / total_days
 
         # calculate projected date
+        if average > 0:
         days_left = not_done_count / average
-        projected_date = today + datetime.timedelta(days=math.ceil(days_left))
+            projected_date = today + datetime.timedelta(
+                days=math.ceil(days_left))
+        else:
+            projected_date = 'Indefinite'
 
         # calculate increased scope by matching created date with sprint start
         increased_scope = 0

@@ -1,19 +1,19 @@
 import asyncio
 import datetime
 import math
-import os
 
 from azure.devops.connection import Connection
 from azure.devops.v5_1.work.models import TeamContext
 from azure.devops.v5_1.work_item_tracking.models import Wiql
-from dotenv import load_dotenv
 from msrest.authentication import BasicAuthentication
 
-# load env file
-load_dotenv()
+from environment import Environment
 
 # constants
 PARENT_TYPES = ['Product Backlog Item', 'Bug']
+
+# load env
+env = Environment()
 
 
 class Task:
@@ -46,7 +46,7 @@ class Client:
         self._colaborators = collaborators
 
         # Fill in with your personal access token and org URL
-        personal_access_token = os.getenv('DEVOPS_TOKEN')
+        personal_access_token = env.devops_token
         organization_url = 'https://dev.azure.com/YfritGames'
 
         # Create a connection to the org
@@ -138,7 +138,7 @@ class Client:
         # our SCRUMBAN scope is defined by all of the prioritized
         # work items, which all receive a tag with the name of our
         # current release
-        qid = 'bda7bbb2-f777-4b1f-b925-effda36aba71'
+        qid = env.sprint_items_query_id
         done_count = 0
         not_done_count = 0
         created_dates = []
@@ -194,7 +194,7 @@ class Client:
 
         # calculate projected date
         if average > 0:
-        days_left = not_done_count / average
+            days_left = not_done_count / average
             projected_date = today + datetime.timedelta(
                 days=math.ceil(days_left))
         else:

@@ -1,5 +1,4 @@
 import logging
-import os
 import traceback
 from datetime import datetime
 
@@ -7,16 +6,15 @@ import telegram.ext
 from telegram.ext import CommandHandler, Updater
 
 from devops_client import Client
+from environment import Environment
+
+# load env
+env = Environment()
 
 # fetch updater and job queue
-print("Starting bot...")
-updater = Updater(token=os.getenv("TELEGRAM_TOKEN"), use_context=True)
+logging.info("Starting bot...")
+updater = Updater(token=env.telegram_token, use_context=True)
 dispatcher = updater.dispatcher
-
-# set the logging stuff
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO)
 
 # set the collaborators and get the devops client
 colaborators = ["***REMOVED***", "***REMOVED***", "***REMOVED***"]
@@ -107,4 +105,4 @@ daily_handler = CommandHandler("daily", daily)
 dispatcher.add_handler(daily_handler)
 
 updater.start_polling()
-print("Bot started and listening for commands.")
+logging.info("Bot started and listening for commands.")

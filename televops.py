@@ -84,9 +84,12 @@ def daily(update, context):
         body += "Please, type in your current status. Don't forget to include what you're doing, what you plan to do, and if you have any impediments!"  # noqa
 
     except Exception:
+        tb = traceback.format_exc()
+        logging.error(tb)
+
         body = "Could not fetch content from Azure Devops. Error trace: \n"
         body += "```" + "\n"
-        body += traceback.format_exc()
+        body += tb
         body += "```" + "\n"
         body += "Check the Yfrit Televops environment for more information."
 

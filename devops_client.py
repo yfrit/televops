@@ -6,6 +6,7 @@ from azure.devops.connection import Connection
 from azure.devops.v5_1.work.models import TeamContext
 from azure.devops.v5_1.work_item_tracking.models import Wiql
 from msrest.authentication import BasicAuthentication
+from utils import force_format_timestamp
 
 from environment import Environment
 
@@ -151,29 +152,20 @@ class Client:
                 # get completion dates and match them with sprint start date
                 closed_date_str = work_item.fields[
                     'Microsoft.VSTS.Common.ClosedDate']
-                closed_date = datetime.datetime.strptime(
-                    closed_date_str, '%Y-%m-%dT%H:%M:%S.%fZ').date()
+                closed_date = force_format_timestamp(closed_date_str)
                 closed_date_str = str(closed_date)
 
                 # store created dates from done items
-                try:
-                    created_date = datetime.datetime.strptime(
-                        work_item.fields['System.CreatedDate'],
-                        '%Y-%m-%dT%H:%M:%S.%fZ').date()
-                except ValueError:
-                    # stupid azure devops omitting .0 floating points
-                    created_date = datetime.datetime.strptime(
-                        work_item.fields['System.CreatedDate'],
-                        '%Y-%m-%dT%H:%M:%SZ').date()
+                created_date = force_format_timestamp(
+                    work_item.fields['System.CreatedDate'])
 
                 created_dates.append(str(created_date))
 
                 done_count += 1
             else:
                 # store created dates from not done items
-                created_date = datetime.datetime.strptime(
-                    work_item.fields['System.CreatedDate'],
-                    '%Y-%m-%dT%H:%M:%S.%fZ').date()
+                created_date = force_format_timestamp(
+                    work_item.fields['System.CreatedDate'])
                 created_dates.append(str(created_date))
 
                 not_done_count += 1

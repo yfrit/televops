@@ -1,4 +1,6 @@
+import json
 import logging
+import sys
 import traceback
 from datetime import datetime
 
@@ -17,8 +19,15 @@ updater = Updater(token=env.telegram_token, use_context=True)
 dispatcher = updater.dispatcher
 
 # set the collaborators and get the devops client
-colaborators = ["***REMOVED***", "***REMOVED***", "***REMOVED***"]
-client = Client(colaborators)
+collaborators = []
+try:
+    with open('collaborators.json') as f:
+        collaborators = json.load(f)
+except FileNotFoundError:
+    logging.error("Collaborators file not found.")
+    sys.exit(1)
+
+client = Client(collaborators)
 
 
 def prepare_message(msg):

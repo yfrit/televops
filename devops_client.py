@@ -181,11 +181,11 @@ class Client:
         today = datetime.datetime.now().date()
         total_days = (today - first_date).days
 
-        # get average
-        average = done_count / total_days
+        if total_days > 0:
+            # get average
+            average = done_count / total_days
 
-        # calculate projected date
-        if average > 0:
+            # calculate projected date
             days_left = not_done_count / average
             projected_date = today + datetime.timedelta(
                 days=math.ceil(days_left))

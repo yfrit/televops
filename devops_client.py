@@ -18,12 +18,13 @@ env = Environment()
 
 
 class Task:
-    def __init__(self, id, name, owner, state, parent=None):
+    def __init__(self, id, name, owner, state, parent=None, effort=None):
         self.id = id
         self.name = name
         self.owner = owner
         self.state = state
         self.parent = parent
+        self.effort = int(effort) if effort else 0
 
     def __str__(self):
         return f'Task {self.id}: {self.name} ({self.owner})'
@@ -38,11 +39,14 @@ class TaskBuilder():
         name = work_item.fields['System.Title']
         owner = work_item.fields['System.AssignedTo']['displayName']
         state = work_item.fields['System.State']
+        effort = work_item.fields.get('Microsoft.VSTS.Scheduling.Effort')
 
-        return Task(id=wid, name=name, owner=owner, state=state)
+        return Task(id=wid, name=name, owner=owner, state=state, effort=effort)
 
 
 class Client:
+    WORK_DAYS_PER_WEEK = 4
+
     def __init__(self, collaborators):
         self._colaborators = collaborators
 
@@ -69,20 +73,20 @@ class Client:
 
     def _get_parent_by_task_id(self, task_id):
         query = f"""
-                SELECT
-                [System.Id],
-                [System.WorkItemType],
-                [System.Title],
-                [System.AssignedTo],
-                [System.State]
+        SELECT
+            [System.Id],
+            [System.WorkItemType],
+            [System.Title],
+            [System.AssignedTo],
+            [System.State]
         FROM workitemLinks
         WHERE
-                (
-                        [System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward'
-                )
-                AND (
-                        [Target].[System.Id] = {task_id}
-                )
+            (
+                    [System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward'
+            )
+            AND (
+                    [Target].[System.Id] = {task_id}
+            )
         MODE (Recursive, ReturnMatchingChildren)
         """ # noqa
         wiql_results = self._query_by_wiql(query, top=30).work_item_relations
@@ -99,20 +103,20 @@ class Client:
     async def _get_tasks_by_user(self, username):
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
         query = f"""
-            select [System.Id],
+            SELECT [System.Id],
                 [System.Title],
                 [System.State]
-            from WorkItems
-            where [System.WorkItemType] = 'Task'
-            and (
+            FROM WorkItems
+            WHERE [System.WorkItemType] = 'Task'
+            AND (
                 [System.State] = 'Done'
-                and [System.ChangedDate] > '{yesterday}'
-                and [System.AssignedTo] = '{username}'
+                AND [System.ChangedDate] > '{yesterday}'
+                AND [System.AssignedTo] = '{username}'
             ) or (
                 [System.State] = 'In Progress'
-                and [System.AssignedTo] = '{username}'
+                AND [System.AssignedTo] = '{username}'
             )
-            order by [System.ChangedDate] desc"""
+            ORDER BY [System.ChangedDate] DESC"""
         wiql_results = self._query_by_wiql(query, top=30).work_items
 
         results = []
@@ -134,6 +138,20 @@ class Client:
 
         return (username, results)
 
+    def _get_current_sprint(self):
+        team_context = TeamContext(project='Card Game', team='Card Game Team')
+        iteration = self._work_client.get_team_iterations(
+            team_context, timeframe='current')[0]
+        first_date = iteration.attributes.start_date.date()
+        release_date = iteration.attributes.finish_date.date()
+        path = iteration.path
+
+        return {
+            'first_date': first_date,
+            'release_date': release_date,
+            'path': path
+        }
+
     def get_current_scope(self):
         # this is hardcoded since it's very project specific for us
         # our SCRUMBAN scope is defined by all of the prioritized
@@ -142,6 +160,8 @@ class Client:
         qid = env.sprint_items_query_id
         done_count = 0
         not_done_count = 0
+        remaning_effort = 0
+        completed_effort = 0
         created_dates = []
         results = self._wit_client.query_by_id(qid).work_items
         work_items = [self._get_work_item(int(res.id)) for res in results]
@@ -158,8 +178,12 @@ class Client:
                 # store created dates from done items
                 created_date = force_format_timestamp(
                     work_item.fields['System.CreatedDate'])
-
                 created_dates.append(str(created_date))
+
+                # get effort
+                effort = work_item.fields.get(
+                    'Microsoft.VSTS.Scheduling.Effort')
+                completed_effort += effort if effort else 0
 
                 done_count += 1
             else:
@@ -168,20 +192,23 @@ class Client:
                     work_item.fields['System.CreatedDate'])
                 created_dates.append(str(created_date))
 
+                # get effort
+                effort = work_item.fields.get(
+                    'Microsoft.VSTS.Scheduling.Effort')
+                remaning_effort += effort if effort else 0
+
                 not_done_count += 1
 
         # get sprint start date to make comparisons
-        team_context = TeamContext(project='Card Game', team='Card Game Team')
-        iteration = self._work_client.get_team_iterations(
-            team_context, timeframe='current')[0]
-        first_date = iteration.attributes.start_date.date()
-        release_date = iteration.attributes.finish_date.date()
+        iteration = self._get_current_sprint()
+        first_date = iteration['first_date']
+        release_date = iteration['release_date']
 
         # get number of worked days
         today = datetime.datetime.now().date()
         total_days = (today - first_date).days
 
-        if total_days > 0:
+        if total_days > 0 and done_count > 0:
             # get average
             average = done_count / total_days
 
@@ -204,7 +231,10 @@ class Client:
             'completed': done_count / (done_count + not_done_count),
             'projected_date': projected_date,
             'release_date': release_date,
-            'increased_scope': increased_scope
+            'increased_scope': increased_scope,
+            'completed_effort': completed_effort,
+            'remaning_effort': remaning_effort,
+            'total_effort': completed_effort + remaning_effort
         }
 
         return results
@@ -215,7 +245,7 @@ class Client:
         # gather a call for each collaborator
         results = await asyncio.gather(*[
             self._get_tasks_by_user(colaborator)
-            for colaborator in self._colaborators
+            for colaborator in self._colaborators.keys()
         ])
 
         # merge all results into a single sorted task map
@@ -227,3 +257,90 @@ class Client:
 
     def get_tasks(self):
         return asyncio.run(self._get_tasks())
+
+    def get_total_effort(self):
+        # this is hardcoded since it's very project specific for us.
+        # the current epic is defined under the query id
+        qid = env.epic_items_query_id
+        results = self._wit_client.query_by_id(qid).work_item_relations
+        work_items = [
+            self._get_work_item(int(res.target.id)) for res in results
+        ]
+
+        # get current sprint
+        iteration = self._get_current_sprint()
+        current_iteration = iteration['path']
+
+        epic_remaining_effort = 0
+        epic_completed_effort = 0
+        sprint_remaining_effort = 0
+        sprint_completed_effort = 0
+        for work_item in work_items:
+            wtype = work_item.fields.get('System.WorkItemType')
+            if wtype in PARENT_TYPES:
+                state = work_item.fields.get('System.State')
+                effort = work_item.fields.get(
+                    'Microsoft.VSTS.Scheduling.Effort')
+                if state == 'Done':
+                    epic_completed_effort += effort if effort else 0
+
+                    iteration_path = work_item.fields.get(
+                        'System.IterationPath')
+                    if iteration_path == current_iteration:
+                        sprint_completed_effort += effort if effort else 0
+                else:
+                    epic_remaining_effort += effort if effort else 0
+
+                    iteration_path = work_item.fields.get(
+                        'System.IterationPath')
+                    if iteration_path == current_iteration:
+                        sprint_remaining_effort += effort if effort else 0
+
+        # get start and finish dates of the epic
+        epic = next((item for item in work_items
+                     if item.fields.get('System.WorkItemType') == 'Epic'),
+                    None)
+        start_date = epic.fields.get('Microsoft.VSTS.Scheduling.StartDate')
+        delivery_date = epic.fields.get('Microsoft.VSTS.Scheduling.TargetDate')
+
+        # find num of collaborators where developer=true
+        developers = [
+            colaborator for colaborator in self._colaborators.keys()
+            if self._colaborators[colaborator]['developer']
+        ]
+        num_developers = len(developers)
+
+        # calulate the number of weeks between start and finish
+        if start_date and delivery_date:
+            # calculate total available effort
+            start_date = force_format_timestamp(start_date)
+            delivery_date = force_format_timestamp(delivery_date)
+            total_weeks = (delivery_date - start_date).days / 7
+            total_work_days = total_weeks * (Client.WORK_DAYS_PER_WEEK *
+                                             num_developers)
+
+            # calculate total remaining effort
+            today = datetime.datetime.now().date()
+            remaining_weeks = (delivery_date - today).days / 7
+            remaining_work_days = remaining_weeks * (
+                Client.WORK_DAYS_PER_WEEK * num_developers)
+        else:
+            raise Exception('Epic has no start or delivery date')
+
+        epic_total_effort = epic_completed_effort + epic_remaining_effort
+        sprint_total_effort = sprint_completed_effort + sprint_remaining_effort
+        return {
+            'epic_total_effort': int(epic_total_effort),
+            'epic_completed_effort': int(epic_completed_effort),
+            'epic_percentage_effort':
+            epic_completed_effort / epic_total_effort,
+            'sprint_total_effort': int(sprint_total_effort),
+            'sprint_completed_effort': int(sprint_completed_effort),
+            'sprint_percentage_effort':
+            sprint_completed_effort / sprint_total_effort,
+            'total_work_days': int(total_work_days),
+            'remaining_work_days': int(remaining_work_days),
+            'capacity_percentage_effort':
+            remaining_work_days / total_work_days,
+            'work_days_per_week': Client.WORK_DAYS_PER_WEEK,
+        }

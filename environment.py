@@ -37,4 +37,5 @@ class Environment(metaclass=Singleton):
         # set env vars
         self.devops_token = self._validate('DEVOPS_TOKEN')
         self.sprint_items_query_id = self._validate('SPRINT_ITEMS_QUERY_ID')
+        self.epic_items_query_id = self._validate('EPIC_ITEMS_QUERY_ID')
         self.telegram_token = self._validate('TELEGRAM_TOKEN')

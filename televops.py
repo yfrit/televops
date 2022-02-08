@@ -56,11 +56,23 @@ def daily(update, context):
         # fetch scope info for heading
         scope = client.get_current_scope()
         completed = "{:.2f}".format(100 * scope["completed"])
+        effort = client.get_total_effort()
+        sprint_percentage = "{:.2f}".format(100 *
+                                            effort["sprint_percentage_effort"])
+        epic_percentage = "{:.2f}".format(100 *
+                                          effort["epic_percentage_effort"])
+        capacity_percentage = "{:.2f}".format(
+            100 * effort["capacity_percentage_effort"])
 
         # present heading
         heading += "Current iteration:\n"
         heading += "```\n"
-        heading += f"├── Stories/Bugs: {scope['done']}/{scope['total']} ({completed}%)\n"  # noqa
+        heading += f"├── Sprint Stories/Bugs: {scope['done']}/{scope['total']} ({completed}%)\n"  # noqa
+        heading += f"├── Effort\n"  # noqa
+        heading += f"│   ├── Sprint Progress: {effort['sprint_completed_effort']}/{effort['sprint_total_effort']} work days completed ({sprint_percentage}%)\n"  # noqa
+        heading += f"│   ├── Epic Progress: {effort['epic_completed_effort']}/{effort['epic_total_effort']} work days completed ({epic_percentage}%)\n"  # noqa
+        heading += f"│   ├── Capacity: {effort['remaining_work_days']}/{effort['total_work_days']} work days remaining ({capacity_percentage}%)\n"  # noqa
+        heading += f"│   ├── Work Days Per Week: {effort['work_days_per_week']}\n"  # noqa
         heading += f"├── Increased Scope: {scope['increased_scope']}\n"
         heading += f"├── Projected Date: {scope['projected_date']}/{scope['release_date']}\n"  # noqa
         heading += "```" + "\n"
@@ -79,7 +91,8 @@ def daily(update, context):
                     parent = task.parent
                     if last_parent != parent.id:
                         last_parent = parent.id
-                        body += f"├── {parent.id}. {parent.name}"
+                        parent_effort = f'- ({parent.effort} days)' if parent.effort else ''  # noqa
+                        body += f"├── {parent.id}. {parent.name} {parent_effort}"  # noqa
                         body += "\n"
 
                     body += f"│   ├── {task.id}. {task.name} - ({task.state})"

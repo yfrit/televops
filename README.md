@@ -170,3 +170,9 @@ Please, type in your current status. Don't forget to include what you're doing, 
 + **Projected Sprint Delivery Date**: the date the sprint will be completed according to stories/bugs being closed. This is an estimation that approximates the average velocity of the sprint. When no stories/bugs are closed, projected date will appear as `Indefinite`.
 + **Epic Delivery Date**: the date the epic will be completed. Set under the Epic's `Target Date` field.
 + **\<COLLABORATOR\> is working on**: a three style structure that displays the stories/bugs the collaborator is working on, the effort of the stories/bugs, and all the child tasks. `In Progress` work items are always displayed, while `Done` work items are only displayed if those were completed in the last 24 hours. Stories/bugs without set efforts will be displayed without the effort.
+
+# Contributing
+[![Github License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+The code is open source and you can contribute to it by making a pull request. It is far from complete, the structure is kind of a mess right now, and a thick refactor is in order, but it serves its purpose for us as a small team, it automates the daily meeting, and it is a fun project to work on. If you have any questions, please open an issue or create a pull request.
+

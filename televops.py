@@ -62,7 +62,9 @@ def daily(update, context):
         epic_percentage = "{:.2f}".format(100 *
                                           effort["epic_percentage_effort"])
         capacity_percentage = "{:.2f}".format(
-            100 * effort["capacity_percentage_effort"])
+            100 * effort["epic_velocity_percentage"])
+        sprint_length_percentage = "{:.2f}".format(
+            100 * effort["sprint_velocity_percentage"])
 
         # present heading
         heading += "Current iteration:\n"
@@ -70,9 +72,11 @@ def daily(update, context):
         heading += f"├── Sprint Stories/Bugs: {scope['done']}/{scope['total']} ({completed}%)\n"  # noqa
         heading += f"├── Effort\n"  # noqa
         heading += f"│   ├── Sprint Progress: {effort['sprint_completed_effort']}/{effort['sprint_total_effort']} work days completed ({sprint_percentage}%)\n"  # noqa
+        heading += f"│   ├── Sprint Velocity: {effort['sprint_remaining_work_days']}/{effort['sprint_total_work_days']} work days remaining ({sprint_length_percentage}%)\n"  # noqa
         heading += f"│   ├── Epic Progress: {effort['epic_completed_effort']}/{effort['epic_total_effort']} work days completed ({epic_percentage}%)\n"  # noqa
-        heading += f"│   ├── Capacity: {effort['remaining_work_days']}/{effort['total_work_days']} work days remaining ({capacity_percentage}%)\n"  # noqa
+        heading += f"│   ├── Epic Velocity: {effort['remaining_work_days']}/{effort['total_work_days']} work days remaining ({capacity_percentage}%)\n"  # noqa
         heading += f"│   ├── Work Days Per Week: {effort['work_days_per_week']}\n"  # noqa
+        heading += f"│   ├── Developers: {effort['num_developers']}\n"  # noqa
         heading += f"├── Increased Scope: {scope['increased_scope']}\n"
         heading += f"├── Projected Date: {scope['projected_date']}/{scope['release_date']}\n"  # noqa
         heading += "```" + "\n"

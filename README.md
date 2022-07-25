@@ -31,8 +31,6 @@ Create a `collaborators.json` file in the root directory (alongside `televops.py
 
 The `developer` field is used to calculate the effort of the sprint, epic and capacity. If true, the person will be counted as a developer. The effort values will be calculated using the number of working days multiplied by the number of developers.
 
-The number of working days is hardcoded in the `devops_client.py` file under the `WORK_DAYS_PER_WEEK` constant.
-
 # Work Items
 
 These are very specific requirements that fit our needs, we only ever work on one epic, distributing the backlog into child features. For this bot to work, your work items must follow the following structure:
@@ -48,7 +46,7 @@ Epics must have the `Start Date` and `Target Date` fields set, Features have no 
 
 # Queries
 
-Some of the functions require an Azure Devops Query to fetch the data. The queries can be built using the Azure Devops Query Builder. After building the queries, you will need to save their query ids and add them to the `.env` file. This is a way to allow for easier parametrizing of the work items, such as which epic is being worked on, without the need of hardcoding these values. These are the required queries:
+Some of the functions require an Azure Devops Query to fetch the data. The queries can be built using [Azure Devops Queries](https://docs.microsoft.com/en-us/azure/devops/boards/queries/using-queries). After building the queries, you will need to save their query ids and add them to the `.env` file. This is a way to allow for easier parametrizing of the work items, such as which epic is being worked on, without the need of hardcoding these values. These are the required queries:
 
 > SPRINT_ITEMS_QUERY_ID
 ```sql
@@ -91,32 +89,56 @@ ORDER BY [System.Id]
 MODE (Recursive)
 ```
 
-The queries are used to fetch work items from the current sprint and work items from the epic you team are working on. Replace the place holders with the correct values.
+The queries are used to fetch work items from the current sprint and work items from the epic you team are working on. Replace the place holders with the correct values. For an easier experience building queries using WIQL, you can use this [WIQL Editor extension](https://marketplace.visualstudio.com/items?itemName=ottostreifel.wiql-editor).
 
-Once you have the queries build and their ids saved, your `.env` file should look like this:
+# Envinronment Variables
+
+The bot relies on a couple of core environment variables. The easiest way to set these is to use a `.env` file. You can also set them manually for a specific environment.
+
+## Queries
+
+Once you have the queries build on Azure Devops and their ids saved, add them to the `.env` file. For more information on how to do this, see the [Azure Devops Query Documentation](https://docs.microsoft.com/en-us/azure/devops/boards/queries/using-queries).
 
 ```env
 SPRINT_ITEMS_QUERY_ID=<your-sprint-items-query-id>
 EPIC_ITEMS_QUERY_ID=<your-epic-items-query-id>
 ```
 
-# Tokens
+## Tokens
 
 Two authentication tokens are required. The first is used to authenticate with Azure Devops. The second is used to authenticate with Telegram.
-Add them to the `.env` file.
 
 ```env
 TELEGRAM_TOKEN=<your-telegram-token>
 DEVOPS_TOKEN=<your-azure-devops-token>
 ```
 
-# Example environment file
+## Organization ID
+
+The organization ID is used to fetch the data from Azure Devops.
+
+```env
+ORGANIZATION_ID=<your-organization-id>
+```
+
+## Other Configuration
+
+These are optional variables that will influence the resulting metrics. The bot will work without setting them. The follwing are default values. Check the [usage](./README.md#Usage) section for more information on their behaviour.
+
+```
+INCREASED_SCOPE_THRESHOLD=1
+WORK_DAYS_PER_WEEK=4
+```
+## Example environment file
 
 ```env
 TELEGRAM_TOKEN=<your-telegram-token>
 DEVOPS_TOKEN=<your-azure-devops-token>
 SPRINT_ITEMS_QUERY_ID=<your-sprint-items-query-id>
 EPIC_ITEMS_QUERY_ID=<your-epic-items-query-id>
+ORGANIZATION_ID=<your-organization-id>
+INCREASED_SCOPE_THRESHOLD=1
+WORK_DAYS_PER_WEEK=4
 ```
 
 # Usage
@@ -133,9 +155,10 @@ Welcome to today's Yfrt's Televops Daily Meeting!
 Current iteration:
 ├── Sprint Stories/Bugs: 1/5 (20.00%)
 ├── Effort
-│   ├── Sprint Progress: 4/31 work days completed (12.90%)
-│   ├── Epic Progress: 15/185 work days completed (8.11%)
-│   ├── Capacity: 203/222 work days remaining (91.28%)
+│   ├── Sprint Progress: 7/37 work days completed (18.92%)
+│   ├── Sprint Velocity: 11/16 work days remaining (71.43%)
+│   ├── Epic Progress: 22/191 work days completed (11.52%)
+│   ├── Epic Velocity: 200/222 work days remaining (89.74%)
 │   ├── Work Days Per Week: 4
 │   ├── Developers: 2
 ├── Increased Scope: 2
@@ -162,11 +185,12 @@ Please, type in your current status. Don't forget to include what you're doing, 
 + Sprint Stories/Bugs: completed/total stories + bugs (percentage)
 + Effort:
     + **Sprint Progress**: completed/total work days (percentage)
+    + **Sprint Velocity**: remaining/total work days in sprint (percentage). Based on start and end dates of the sprint, number of developers and work days per week.
     + **Epic Progress**: completed/total work days (percentage)
-    + **Capacity**: remaining/total work days (percentage)
-    + **Work Days Per Week**: amount of work days per week set in the code as a constant
-    + **Developers**: number of collaborators set as developers in the `collaborators.json` file.
-+ **Increased Scope**: number of stories/bugs added to the sprint as intruders, that is, after sprint planning and during the sprint.
+    + **Epic Velocity**: remaining/total work days in epic (percentage). Based on end date of the epic, number of developers and work days per week.
+    + **Work Days Per Week**: amount of work days per week. Affects the velocity of the sprint and epic. Changeable in the environment file.
+    + **Developers**: number of collaborators set as developers in the `collaborators.json` file. Affects the velocity of the sprint and epic.
++ **Increased Scope**: number of stories/bugs added to the sprint as intruders, that is, after sprint planning and during the sprint. Changeable in the environment file.
 + **Projected Sprint Delivery Date**: the date the sprint will be completed according to stories/bugs being closed. This is an estimation that approximates the average velocity of the sprint. When no stories/bugs are closed, projected date will appear as `Indefinite`.
 + **Epic Delivery Date**: the date the epic will be completed. Set under the Epic's `Target Date` field.
 + **\<COLLABORATOR\> is working on**: a three style structure that displays the stories/bugs the collaborator is working on, the effort of the stories/bugs, and all the child tasks. `In Progress` work items are always displayed, while `Done` work items are only displayed if those were completed in the last 24 hours. Stories/bugs without set efforts will be displayed without the effort.

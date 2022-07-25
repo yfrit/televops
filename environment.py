@@ -39,3 +39,7 @@ class Environment(metaclass=Singleton):
         self.sprint_items_query_id = self._validate('SPRINT_ITEMS_QUERY_ID')
         self.epic_items_query_id = self._validate('EPIC_ITEMS_QUERY_ID')
         self.telegram_token = self._validate('TELEGRAM_TOKEN')
+        self.org_id = self._validate('ORGANIZATION_ID')
+        self.increased_scope_threshold = os.getenv('INCREASED_SCOPE_THRESHOLD',
+                                                   1)
+        self.work_days_per_week = os.getenv('WORK_DAYS_PER_WEEK', 4)

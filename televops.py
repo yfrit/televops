@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import sys
 import traceback
 from datetime import datetime
@@ -30,12 +31,19 @@ except FileNotFoundError:
 client = Client(collaborators)
 
 
-def prepare_message(msg):
-    return msg.replace("-", "\-") \
-              .replace(".", "\.") \
-              .replace("(", "\(") \
-              .replace(")", "\)") \
-              .replace("!", "\!") # noqa
+def prepare_message(msg, hard_parse=False):
+    if hard_parse:
+        # hard parse is used for error messages
+        msg = re.sub(r'([^\\])', r'\\\1', msg)
+
+        # ignore markdown monospace character
+        return msg.replace("\\`", "`")
+    else:
+        return msg.replace("-", "\-") \
+                  .replace(".", "\.") \
+                  .replace("(", "\(") \
+                  .replace(")", "\)") \
+                  .replace("!", "\!") # noqa
 
 
 # set the function command callback for the daily
@@ -46,6 +54,7 @@ def daily(update, context):
     working_text = "Working on daily request..."
     msg = prepare_message(str(heading + working_text))
 
+    hard_parse = False
     try:
         # send message to show api is working
         message = context.bot.send_message(
@@ -63,27 +72,24 @@ def daily(update, context):
                                           effort["epic_percentage_effort"])
         capacity_percentage = "{:.2f}".format(
             100 * effort["epic_velocity_percentage"])
-        sprint_length_percentage = "{:.2f}".format(
-            100 * effort["sprint_velocity_percentage"])
 
         # present heading
-        heading += "Current iteration:\n"
-        heading += "```\n"
-        heading += f"├── Sprint Stories/Bugs: {scope['done']}/{scope['total']} ({completed}%)\n"  # noqa
-        heading += f"├── Effort\n"  # noqa
-        heading += f"│   ├── Sprint Progress: {effort['sprint_completed_effort']}/{effort['sprint_total_effort']} work days completed ({sprint_percentage}%)\n"  # noqa
-        heading += f"│   ├── Sprint Velocity: {effort['sprint_remaining_work_days']}/{effort['sprint_total_work_days']} work days remaining ({sprint_length_percentage}%)\n"  # noqa
-        heading += f"│   ├── Epic Progress: {effort['epic_completed_effort']}/{effort['epic_total_effort']} work days completed ({epic_percentage}%)\n"  # noqa
-        heading += f"│   ├── Epic Velocity: {effort['remaining_work_days']}/{effort['total_work_days']} work days remaining ({capacity_percentage}%)\n"  # noqa
-        heading += f"│   ├── Work Days Per Week: {effort['work_days_per_week']}\n"  # noqa
-        heading += f"│   ├── Developers: {effort['num_developers']}\n"  # noqa
-        heading += f"├── Increased Scope: {scope['increased_scope']}\n"
-        heading += f"├── Projected Date: {scope['projected_date']}/{scope['release_date']}\n"  # noqa
-        heading += "```" + "\n"
+        body = "Current iteration:\n"
+        body += "```\n"
+        body += f"├── Sprint Stories/Bugs: {scope['done']}/{scope['total']} ({completed}%)\n"  # noqa
+        body += f"├── Effort\n"  # noqa
+        body += f"│   ├── Sprint Progress: {effort['sprint_completed_effort']}/{effort['sprint_total_effort']} work days completed ({sprint_percentage}%)\n"  # noqa
+        body += f"│   ├── Epic Progress: {effort['epic_completed_effort']}/{effort['epic_total_effort']} work days completed ({epic_percentage}%)\n"  # noqa
+        body += f"│   ├── Epic Velocity: {effort['epic_remaining_effort']}/{effort['remaining_work_days']} work days remaining ({capacity_percentage}%)\n"  # noqa
+        body += f"│   ├── Work Days Per Week: {effort['work_days_per_week']}\n"  # noqa
+        body += f"│   ├── Developers: {effort['num_developers']}\n"  # noqa
+        body += f"│   ├── Sprint Capacity: {effort['sprint_capacity']}\n"  # noqa
+        body += f"├── Increased Scope: {scope['increased_scope']}\n"
+        body += f"├── Projected Date: {scope['projected_date']}/{scope['release_date']}\n"  # noqa
+        body += "```" + "\n"
 
         # fetch and present body info
         tasks = client.get_tasks()
-        body = ""
 
         for owner, tasks in tasks.items():
             body += owner + " is working on:\n"
@@ -108,6 +114,7 @@ def daily(update, context):
         body += "Please, type in your current status. Don't forget to include what you're doing, what you plan to do, and if you have any impediments!"  # noqa
 
     except Exception:
+        hard_parse = True
         tb = traceback.format_exc()
         logging.error(tb)
 
@@ -118,7 +125,7 @@ def daily(update, context):
         body += "Check the Yfrit Televops environment for more information."
 
     # parse command characters
-    msg = prepare_message(str(heading + body))
+    msg = prepare_message(str(heading + body), hard_parse)
 
     # edit message with daily contents
     context.bot.edit_message_text(chat_id=update.effective_chat.id,

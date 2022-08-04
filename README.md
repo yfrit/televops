@@ -89,7 +89,7 @@ ORDER BY [System.Id]
 MODE (Recursive)
 ```
 
-The queries are used to fetch work items from the current sprint and work items from the epic you team are working on. Replace the place holders with the correct values. For an easier experience building queries using WIQL, you can use this [WIQL Editor extension](https://marketplace.visualstudio.com/items?itemName=ottostreifel.wiql-editor).
+The queries are used to fetch work items from the current sprint and work items from the epic your team is working on. Replace the place holders with the correct values. For an easier experience building queries using WIQL, you can use this [WIQL Editor extension](https://marketplace.visualstudio.com/items?itemName=ottostreifel.wiql-editor).
 
 # Envinronment Variables
 
@@ -97,7 +97,7 @@ The bot relies on a couple of core environment variables. The easiest way to set
 
 ## Queries
 
-Once you have the queries build on Azure Devops and their ids saved, add them to the `.env` file. For more information on how to do this, see the [Azure Devops Query Documentation](https://docs.microsoft.com/en-us/azure/devops/boards/queries/using-queries).
+Once you have the queries built on Azure Devops and their ids saved, add them to the `.env` file.
 
 ```env
 SPRINT_ITEMS_QUERY_ID=<your-sprint-items-query-id>
@@ -123,12 +123,16 @@ ORGANIZATION_ID=<your-organization-id>
 
 ## Other Configuration
 
-These are optional variables that will influence the resulting metrics. The bot will work without setting them. The follwing are default values. Check the [usage](./README.md#Usage) section for more information on their behaviour.
+These are optional variables that will influence behaviour and resulting metrics. The bot will work without setting them. The following are default values. Check the [usage](./README.md#Usage) section for more information on their behaviour.
 
 ```
 INCREASED_SCOPE_THRESHOLD=1
 WORK_DAYS_PER_WEEK=4
+TELEGRAM_ALLOWED_CHAT_IDS=
 ```
+
+The `TELEGRAM_ALLOWED_CHAT_IDS` variable is a comma separated list of chat ids that the bot will respond to. If you want to allow the bot to respond to all chats, leave this variable empty.
+
 ## Example environment file
 
 ```env
@@ -139,6 +143,7 @@ EPIC_ITEMS_QUERY_ID=<your-epic-items-query-id>
 ORGANIZATION_ID=<your-organization-id>
 INCREASED_SCOPE_THRESHOLD=1
 WORK_DAYS_PER_WEEK=4
+TELEGRAM_ALLOWED_CHAT_IDS=<chat-id-one>,<chat-id-two>
 ```
 
 # Usage

@@ -43,3 +43,5 @@ class Environment(metaclass=Singleton):
         self.increased_scope_threshold = os.getenv('INCREASED_SCOPE_THRESHOLD',
                                                    1)
         self.work_days_per_week = os.getenv('WORK_DAYS_PER_WEEK', 4)
+        self.telegram_allowed_chat_ids = os.getenv('TELEGRAM_ALLOWED_CHAT_IDS',
+                                                   ',').split(',')

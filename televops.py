@@ -46,8 +46,25 @@ def prepare_message(msg, hard_parse=False):
                   .replace("!", "\!") # noqa
 
 
+def validate_chat_id(chat_id):
+    chat_id = str(chat_id)
+    allowed_chat_ids = env.telegram_allowed_chat_ids
+    if allowed_chat_ids:
+        # if user set allowed chat ids, return True if chat_id is in the list
+        return chat_id in allowed_chat_ids
+    else:
+        # if user didn't set allowed chat ids, return True (allow all)
+        return True
+
+
 # set the function command callback for the daily
 def daily(update, context):
+    # validate chat_id
+    chat_id = update.message.chat_id
+    if not validate_chat_id(chat_id):
+        logging.warning(f"Chat ID {chat_id} is not allowed.")
+        return
+
     # prepare heading
     heading = f"{datetime.now()}\n"
     heading += "Welcome to today's Yfrt's Televops Daily Meeting!\n\n"

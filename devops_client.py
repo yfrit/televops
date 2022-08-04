@@ -203,7 +203,7 @@ class Client:
         release_date = iteration['release_date']
 
         # get number of worked days
-        today = datetime.datetime.now().date()
+        today = datetime.date.today()
         total_days = (today - first_date).days
 
         if total_days > 0 and done_count > 0:
@@ -279,10 +279,12 @@ class Client:
             wtype = work_item.fields.get('System.WorkItemType')
             if wtype in PARENT_TYPES:
                 state = work_item.fields.get('System.State')
-                effort = work_item.fields.get(
-                    'Microsoft.VSTS.Scheduling.Effort', 0)
-                remaining_work = work_item.fields.get(
-                    'Microsoft.VSTS.Scheduling.RemainingWork', 0)
+                effort = int(
+                    work_item.fields.get('Microsoft.VSTS.Scheduling.Effort',
+                                         0))
+                remaining_work = int(
+                    work_item.fields.get(
+                        'Microsoft.VSTS.Scheduling.RemainingWork', 0))
                 if state == 'Done':
                     # for done items, effort is considered completed
                     epic_completed_effort += effort
@@ -323,64 +325,41 @@ class Client:
         ]
         num_developers = len(developers)
 
-        # calulate the number of weeks between start and finish
+        # calculate total remaining effort
         if start_date and delivery_date:
-            # calculate total available effort
-            start_date = force_format_timestamp(start_date)
             delivery_date = force_format_timestamp(delivery_date)
-            total_weeks = (delivery_date - start_date).days / 7
-            total_work_days = total_weeks * (env.work_days_per_week *
-                                             num_developers)
-
-            # calculate total remaining effort
-            today = datetime.datetime.now().date()
+            today = datetime.date.today()
             remaining_weeks = (delivery_date - today).days / 7
-            remaining_work_days = remaining_weeks * (env.work_days_per_week *
-                                                     num_developers)
+            remaining_work_days = int(
+                remaining_weeks * (env.work_days_per_week * num_developers))
         else:
             raise Exception('Epic has no start or delivery date')
 
         # calculate sprint velocity
-        today = datetime.datetime.now().date()
         sprint_start_date = iteration['first_date']
         sprint_delivery_date = iteration['release_date']
-        sprint_remaining_weeks = (sprint_delivery_date - today).days / 7
-        sprint_total_weeks = (sprint_delivery_date -
-                              sprint_start_date).days / 7
-        sprint_remaining_work_days = sprint_remaining_weeks * (
-            env.work_days_per_week * num_developers)
-        sprint_total_work_days = sprint_total_weeks * (env.work_days_per_week *
-                                                       num_developers)
+        sprint_work_days = (sprint_delivery_date - sprint_start_date).days + 1
+        sprint_total_weeks = sprint_work_days / 7
+        sprint_capacity = int(sprint_total_weeks *
+                              (env.work_days_per_week * num_developers))
 
+        # calculate totals
         epic_total_effort = epic_completed_effort + epic_remaining_effort
         sprint_total_effort = sprint_completed_effort + sprint_remaining_effort
         return {
-            'epic_total_effort':
-            int(epic_total_effort),
-            'epic_completed_effort':
-            int(epic_completed_effort),
+            'epic_remaining_effort': epic_remaining_effort,
+            'epic_total_effort': epic_total_effort,
+            'epic_completed_effort': epic_completed_effort,
             'epic_percentage_effort':
             epic_completed_effort / epic_total_effort,
-            'sprint_total_effort':
-            int(sprint_total_effort),
-            'sprint_completed_effort':
-            int(sprint_completed_effort),
+            'sprint_total_effort': sprint_total_effort,
+            'sprint_completed_effort': sprint_completed_effort,
             'sprint_percentage_effort':
             sprint_completed_effort / sprint_total_effort,
-            'total_work_days':
-            int(total_work_days),
-            'remaining_work_days':
-            int(remaining_work_days),
+            'remaining_work_days': remaining_work_days,
             'epic_velocity_percentage':
-            remaining_work_days / total_work_days,
-            'work_days_per_week':
-            env.work_days_per_week,
-            'num_developers':
-            num_developers,
-            'sprint_remaining_work_days':
-            int(sprint_remaining_work_days),
-            'sprint_total_work_days':
-            int(sprint_total_work_days),
-            'sprint_velocity_percentage':
-            sprint_remaining_work_days / sprint_total_work_days,
+            epic_remaining_effort / remaining_work_days,
+            'work_days_per_week': env.work_days_per_week,
+            'num_developers': num_developers,
+            'sprint_capacity': sprint_capacity,
         }

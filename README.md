@@ -155,12 +155,12 @@ Welcome to today's Yfrt's Televops Daily Meeting!
 Current iteration:
 ├── Sprint Stories/Bugs: 1/5 (20.00%)
 ├── Effort
-│   ├── Sprint Progress: 7/37 work days completed (18.92%)
-│   ├── Sprint Velocity: 11/16 work days remaining (71.43%)
+│   ├── Sprint Progress: 10/15 work days completed (66.67%)
 │   ├── Epic Progress: 22/191 work days completed (11.52%)
-│   ├── Epic Velocity: 200/222 work days remaining (89.74%)
+│   ├── Epic Velocity: 169/188 work days remaining (89.89%)
 │   ├── Work Days Per Week: 4
 │   ├── Developers: 2
+│   ├── Sprint Capacity: 16
 ├── Increased Scope: 2
 ├── Projected Sprint Delivery Date: 2021-06-29/2021-07-01
 ├── Epic Delivery Date: 2021-12-13
@@ -182,14 +182,14 @@ Please, type in your current status. Don't forget to include what you're doing, 
 
 ## Response Structure
 
-+ Sprint Stories/Bugs: completed/total stories + bugs (percentage)
-+ Effort:
++ **Sprint Stories/Bugs**: completed/total stories + bugs (percentage)
++ **Effort**:
     + **Sprint Progress**: completed/total work days (percentage)
-    + **Sprint Velocity**: remaining/total work days in sprint (percentage). Based on start and end dates of the sprint, number of developers and work days per week.
     + **Epic Progress**: completed/total work days (percentage)
     + **Epic Velocity**: remaining/total work days in epic (percentage). Based on end date of the epic, number of developers and work days per week.
     + **Work Days Per Week**: amount of work days per week. Affects the velocity of the sprint and epic. Changeable in the environment file.
     + **Developers**: number of collaborators set as developers in the `collaborators.json` file. Affects the velocity of the sprint and epic.
+    + **Sprint Capacity**: amount of work days per sprint. Calculated based on sprint start date, sprint end date, number of developers and work days per week.
 + **Increased Scope**: number of stories/bugs added to the sprint as intruders, that is, after sprint planning and during the sprint. Changeable in the environment file.
 + **Projected Sprint Delivery Date**: the date the sprint will be completed according to stories/bugs being closed. This is an estimation that approximates the average velocity of the sprint. When no stories/bugs are closed, projected date will appear as `Indefinite`.
 + **Epic Delivery Date**: the date the epic will be completed. Set under the Epic's `Target Date` field.

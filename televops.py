@@ -105,25 +105,32 @@ def daily(update, context):
         body += f"├── Projected Date: {scope['projected_date']}/{scope['release_date']}\n"  # noqa
         body += "```" + "\n"
 
-        # fetch and present body info
-        tasks = client.get_tasks()
+        # fetch and format tasks
+        fetched_tasks = client.get_tasks()
+        task_map = {}
+        for owner, tasks in fetched_tasks.items():
+            if owner not in task_map:
+                task_map[owner] = {}
+            for task in tasks:
+                parent = task.parent.id
+                if parent not in task_map[owner]:
+                    task_map[owner][parent] = [task]
+                else:
+                    task_map[owner][parent].append(task)
 
-        for owner, tasks in tasks.items():
+        # present body info
+        for owner, work_items in task_map.items():
             body += owner + " is working on:\n"
             body += "```\n"
-
-            if tasks:
-                last_parent = 0
-                for task in tasks:
-                    parent = task.parent
-                    if last_parent != parent.id:
-                        last_parent = parent.id
-                        parent_effort = f'- ({parent.effort} days)' if parent.effort else ''  # noqa
-                        body += f"├── {parent.id}. {parent.name} {parent_effort}"  # noqa
-                        body += "\n"
-
-                    body += f"│   ├── {task.id}. {task.name} - ({task.state})"
+            if work_items:
+                for parent_id, tasks in work_items.items():
+                    parent = tasks[0].parent  # all tasks have the same parent
+                    parent_effort = f'- ({parent.effort} days)' if parent.effort else ''  # noqa
+                    body += f"├── {parent_id}. {parent.name} {parent_effort}"  # noqa
                     body += "\n"
+                    for task in tasks:
+                        body += f"│   ├── {task.id}. {task.name} - ({task.state})"  # noqa
+                        body += "\n"
             else:
                 body += "No tasks in progress.\n"
             body += "```" + "\n"

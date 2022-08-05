@@ -6,9 +6,9 @@ from azure.devops.connection import Connection
 from azure.devops.v5_1.work.models import TeamContext
 from azure.devops.v5_1.work_item_tracking.models import Wiql
 from msrest.authentication import BasicAuthentication
-from utils import force_format_timestamp
 
 from environment import Environment
+from utils import force_format_timestamp
 
 # constants
 PARENT_TYPES = ['Product Backlog Item', 'Bug']
@@ -346,6 +346,7 @@ class Client:
         # calculate totals
         epic_total_effort = epic_completed_effort + epic_remaining_effort
         sprint_total_effort = sprint_completed_effort + sprint_remaining_effort
+
         return {
             'epic_remaining_effort': epic_remaining_effort,
             'epic_total_effort': epic_total_effort,

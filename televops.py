@@ -59,15 +59,19 @@ def validate_chat_id(chat_id):
 
 # set the function command callback for the daily
 def daily(update, context):
-    # validate chat_id
     chat_id = update.message.chat_id
+    logging.info("Daily command received from "
+                 f"@{update.effective_user['username']} "
+                 f"at channel {chat_id}.")
+
+    # validate chat_id
     if not validate_chat_id(chat_id):
         logging.warning(f"Chat ID {chat_id} is not allowed.")
         return
 
     # prepare heading
     heading = f"{datetime.now()}\n"
-    heading += "Welcome to today's Yfrt's Televops Daily Meeting!\n\n"
+    heading += "Welcome to today's Yfrit's Televops Daily Meeting!\n\n"
     working_text = "Working on daily request..."
     msg = prepare_message(str(heading + working_text))
 
@@ -79,7 +83,7 @@ def daily(update, context):
             text=msg,
             parse_mode=telegram.ParseMode.MARKDOWN_V2)
 
-        # fetch scope info for heading
+        # fetch scope info for body
         scope = client.get_current_scope()
         completed = "{:.2f}".format(100 * scope["completed"])
         effort = client.get_total_effort()
@@ -90,7 +94,7 @@ def daily(update, context):
         capacity_percentage = "{:.2f}".format(
             100 * effort["epic_velocity_percentage"])
 
-        # present heading
+        # present body
         body = "Current iteration:\n"
         body += "```\n"
         body += f"├── Sprint Stories/Bugs: {scope['done']}/{scope['total']} ({completed}%)\n"  # noqa
@@ -118,7 +122,16 @@ def daily(update, context):
                 else:
                     task_map[owner][parent].append(task)
 
-        # present body info
+        # sort parents by id
+        for owner, work_items in task_map.items():
+            task_map[owner] = dict(sorted(work_items.items()))
+
+        # sort tasks by id
+        for owner, work_items in task_map.items():
+            for parent, tasks in work_items.items():
+                task_map[owner][parent] = sorted(tasks, key=lambda x: x.id)
+
+        # present body tasks info
         for owner, work_items in task_map.items():
             body += owner + " is working on:\n"
             body += "```\n"

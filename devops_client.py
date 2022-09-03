@@ -282,9 +282,12 @@ class Client:
                 effort = int(
                     work_item.fields.get('Microsoft.VSTS.Scheduling.Effort',
                                          0))
+                # we use a default value of -1 to facilitate the casting
+                # and indicate the difference between a missing value
+                # and a value of 0
                 remaining_work = int(
                     work_item.fields.get(
-                        'Microsoft.VSTS.Scheduling.RemainingWork', 0))
+                        'Microsoft.VSTS.Scheduling.RemainingWork', -1))
                 if state == 'Done':
                     # for done items, effort is considered completed
                     epic_completed_effort += effort
@@ -294,6 +297,7 @@ class Client:
                     if iteration_path == current_iteration:
                         sprint_completed_effort += effort
                 else:
+
                     # for not done items, remaining work is considered
                     burndown = effort - remaining_work
 
@@ -305,7 +309,7 @@ class Client:
                     # check if remaining work exists, add effort if not
                     iteration_path = work_item.fields.get(
                         'System.IterationPath')
-                    delta = effort if remaining_work == 0 else remaining_work
+                    delta = effort if remaining_work == -1 else remaining_work
                     epic_remaining_effort += delta
                     if iteration_path == current_iteration:
                         # for the sprint metric, check the iteration path

@@ -113,12 +113,14 @@ TELEGRAM_TOKEN=<your-telegram-token>
 DEVOPS_TOKEN=<your-azure-devops-token>
 ```
 
-## Organization ID
+## Azure Devops Project Variables
 
-The organization ID is used to fetch the data from Azure Devops.
+Information used to fetch the data from Azure Devops.
 
 ```env
 ORGANIZATION_ID=<your-organization-id>
+PROJECT_ID=<your-project-id>
+TEAM_ID=<your-team-id>
 ```
 
 ## Other Configuration
@@ -141,6 +143,8 @@ DEVOPS_TOKEN=<your-azure-devops-token>
 SPRINT_ITEMS_QUERY_ID=<your-sprint-items-query-id>
 EPIC_ITEMS_QUERY_ID=<your-epic-items-query-id>
 ORGANIZATION_ID=<your-organization-id>
+PROJECT_ID=<your-project-id>
+TEAM_ID=<your-team-id>
 INCREASED_SCOPE_THRESHOLD=1
 WORK_DAYS_PER_WEEK=4
 TELEGRAM_ALLOWED_CHAT_IDS=<chat-id-one>,<chat-id-two>
@@ -163,6 +167,7 @@ Current iteration:
 │   ├── Sprint Progress: 10/15 work days completed (66.67%)
 │   ├── Epic Progress: 22/191 work days completed (11.52%)
 │   ├── Epic Velocity: 169/188 work days remaining (89.89%)
+│   ├── Blocked: 3 work days
 │   ├── Work Days Per Week: 4
 │   ├── Developers: 2
 │   ├── Sprint Capacity: 16
@@ -192,6 +197,7 @@ Please, type in your current status. Don't forget to include what you're doing, 
     + **Sprint Progress**: completed/total work days (percentage)
     + **Epic Progress**: completed/total work days (percentage)
     + **Epic Velocity**: remaining/total work days in epic (percentage). Based on end date of the epic, number of developers and work days per week.
+    + **Blocked**: number of work days blocked, sum of the effort of PBIs and bugs that contain the tag `Blocked`.
     + **Work Days Per Week**: amount of work days per week. Affects the velocity of the sprint and epic. Changeable in the environment file.
     + **Developers**: number of collaborators set as developers in the `collaborators.json` file. Affects the velocity of the sprint and epic.
     + **Sprint Capacity**: amount of work days per sprint. Calculated based on sprint start date, sprint end date, number of developers and work days per week.

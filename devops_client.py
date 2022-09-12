@@ -18,13 +18,21 @@ env = Environment()
 
 
 class Task:
-    def __init__(self, id, name, owner, state, parent=None, effort=None):
+    def __init__(self,
+                 id,
+                 name,
+                 owner,
+                 state,
+                 parent=None,
+                 effort=None,
+                 blocked=False):
         self.id = id
         self.name = name
         self.owner = owner
         self.state = state
         self.parent = parent
         self.effort = int(effort) if effort else 0
+        self.blocked = blocked
 
     def __str__(self):
         return f'Task {self.id}: {self.name} ({self.owner})'
@@ -34,14 +42,24 @@ class Task:
 
 
 class TaskBuilder():
+    # TODO: even though this is here, there's a lot of direct access to API
+    # fields in the code below. This should be refactored to use this class
+    # instead.
     def from_work_item(self, work_item):
         wid = work_item.id
         name = work_item.fields['System.Title']
         owner = work_item.fields['System.AssignedTo']['displayName']
         state = work_item.fields['System.State']
         effort = work_item.fields.get('Microsoft.VSTS.Scheduling.Effort')
+        tags = work_item.fields.get('System.Tags')
+        blocked = tags and 'blocked' in tags
 
-        return Task(id=wid, name=name, owner=owner, state=state, effort=effort)
+        return Task(id=wid,
+                    name=name,
+                    owner=owner,
+                    state=state,
+                    effort=effort,
+                    blocked=blocked)
 
 
 class Client:
@@ -137,7 +155,7 @@ class Client:
         return (username, results)
 
     def _get_current_sprint(self):
-        team_context = TeamContext(project='Card Game', team='Card Game Team')
+        team_context = TeamContext(project=env.project_id, team=env.team_id)
         iteration = self._work_client.get_team_iterations(
             team_context, timeframe='current')[0]
         first_date = iteration.attributes.start_date.date()
@@ -275,6 +293,7 @@ class Client:
         epic_completed_effort = 0
         sprint_remaining_effort = 0
         sprint_completed_effort = 0
+        blocked_effort = 0
         for work_item in work_items:
             wtype = work_item.fields.get('System.WorkItemType')
             if wtype in PARENT_TYPES:
@@ -297,7 +316,6 @@ class Client:
                     if iteration_path == current_iteration:
                         sprint_completed_effort += effort
                 else:
-
                     # for not done items, remaining work is considered
                     burndown = effort - remaining_work
 
@@ -314,6 +332,11 @@ class Client:
                     if iteration_path == current_iteration:
                         # for the sprint metric, check the iteration path
                         sprint_remaining_effort += delta
+
+                    # check if the item is blocked
+                    tags = work_item.fields.get('System.Tags')
+                    if tags and 'blocked' in tags:
+                        blocked_effort += effort
 
         # get start and finish dates of the epic
         epic = next((item for item in work_items
@@ -367,4 +390,5 @@ class Client:
             'work_days_per_week': env.work_days_per_week,
             'num_developers': num_developers,
             'sprint_capacity': sprint_capacity,
+            'blocked_effort': blocked_effort
         }

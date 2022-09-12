@@ -93,6 +93,7 @@ def daily(update, context):
                                           effort["epic_percentage_effort"])
         capacity_percentage = "{:.2f}".format(
             100 * effort["epic_velocity_percentage"])
+        blocked_effort = effort["blocked_effort"]
 
         # present body
         body = "Current iteration:\n"
@@ -102,6 +103,7 @@ def daily(update, context):
         body += f"│   ├── Sprint Progress: {effort['sprint_completed_effort']}/{effort['sprint_total_effort']} work days completed ({sprint_percentage}%)\n"  # noqa
         body += f"│   ├── Epic Progress: {effort['epic_completed_effort']}/{effort['epic_total_effort']} work days completed ({epic_percentage}%)\n"  # noqa
         body += f"│   ├── Epic Velocity: {effort['epic_remaining_effort']}/{effort['remaining_work_days']} work days remaining ({capacity_percentage}%)\n"  # noqa
+        body += f"│   └── Blocked: {blocked_effort} work days\n"  # noqa
         body += f"│   ├── Work Days Per Week: {effort['work_days_per_week']}\n"  # noqa
         body += f"│   ├── Developers: {effort['num_developers']}\n"  # noqa
         body += f"│   ├── Sprint Capacity: {effort['sprint_capacity']}\n"  # noqa
@@ -139,7 +141,8 @@ def daily(update, context):
                 for parent_id, tasks in work_items.items():
                     parent = tasks[0].parent  # all tasks have the same parent
                     parent_effort = f'- ({parent.effort} days)' if parent.effort else ''  # noqa
-                    body += f"├── {parent_id}. {parent.name} {parent_effort}"  # noqa
+                    blocked = '[BLOCKED] ' if parent.blocked else ''
+                    body += f"├── {blocked}{parent_id}. {parent.name} {parent_effort}"  # noqa
                     body += "\n"
                     for task in tasks:
                         body += f"│   ├── {task.id}. {task.name} - ({task.state})"  # noqa

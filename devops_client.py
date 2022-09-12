@@ -52,7 +52,7 @@ class TaskBuilder():
         state = work_item.fields['System.State']
         effort = work_item.fields.get('Microsoft.VSTS.Scheduling.Effort')
         tags = work_item.fields.get('System.Tags')
-        blocked = tags and 'blocked' in tags
+        blocked = tags and 'Blocked' in tags
 
         return Task(id=wid,
                     name=name,
@@ -335,7 +335,7 @@ class Client:
 
                     # check if the item is blocked
                     tags = work_item.fields.get('System.Tags')
-                    if tags and 'blocked' in tags:
+                    if tags and 'Blocked' in tags:
                         blocked_effort += effort
 
         # get start and finish dates of the epic

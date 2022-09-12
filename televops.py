@@ -103,7 +103,7 @@ def daily(update, context):
         body += f"│   ├── Sprint Progress: {effort['sprint_completed_effort']}/{effort['sprint_total_effort']} work days completed ({sprint_percentage}%)\n"  # noqa
         body += f"│   ├── Epic Progress: {effort['epic_completed_effort']}/{effort['epic_total_effort']} work days completed ({epic_percentage}%)\n"  # noqa
         body += f"│   ├── Epic Velocity: {effort['epic_remaining_effort']}/{effort['remaining_work_days']} work days remaining ({capacity_percentage}%)\n"  # noqa
-        body += f"│   └── Blocked: {blocked_effort} work days\n"  # noqa
+        body += f"│   ├── Blocked: {blocked_effort} work days\n"  # noqa
         body += f"│   ├── Work Days Per Week: {effort['work_days_per_week']}\n"  # noqa
         body += f"│   ├── Developers: {effort['num_developers']}\n"  # noqa
         body += f"│   ├── Sprint Capacity: {effort['sprint_capacity']}\n"  # noqa

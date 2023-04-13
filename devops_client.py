@@ -120,22 +120,25 @@ class Client:
 
     async def _get_tasks_by_user(self, username):
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
-        one_year_ago = datetime.date.today() - datetime.timedelta(days=365)
+        project = env.project_id
+        team = env.team_id
         query = f"""
             SELECT [System.Id],
                 [System.Title],
                 [System.State]
             FROM WorkItems
             WHERE [System.WorkItemType] = 'Task'
-            AND (
-                [System.State] = 'Done'
-                AND [System.ChangedDate] > '{yesterday}'
+                AND [System.IterationPath] UNDER
+                    @currentIteration('[{project}]\\{team}')
                 AND [System.AssignedTo] = '{username}'
-                AND [System.CreatedDate] > '{one_year_ago}'
-            ) or (
-                [System.State] = 'In Progress'
-                AND [System.AssignedTo] = '{username}'
-            )
+                AND (
+                    (
+                        [System.State] = 'Done'
+                        AND [System.ChangedDate] > '{yesterday}'
+                    ) or (
+                        [System.State] = 'In Progress'
+                    )
+                )
             ORDER BY [System.ChangedDate] DESC"""
         wiql_results = self._query_by_wiql(query, top=30).work_items
 

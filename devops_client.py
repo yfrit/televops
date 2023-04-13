@@ -146,7 +146,6 @@ class Client:
             work_items = (self._get_work_item(int(res.id))
                           for res in wiql_results)
             for work_item in work_items:
-                print(work_item.fields['System.Title'])
                 # create child
                 child = self._task_builder.from_work_item(work_item)
 

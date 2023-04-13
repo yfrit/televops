@@ -18,6 +18,7 @@ env = Environment()
 
 
 class Task:
+
     def __init__(self,
                  id,
                  name,
@@ -63,6 +64,7 @@ class TaskBuilder():
 
 
 class Client:
+
     def __init__(self, collaborators):
         self._colaborators = collaborators
 
@@ -118,6 +120,7 @@ class Client:
 
     async def _get_tasks_by_user(self, username):
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
+        one_year_ago = datetime.date.today() - datetime.timedelta(days=365)
         query = f"""
             SELECT [System.Id],
                 [System.Title],
@@ -128,6 +131,7 @@ class Client:
                 [System.State] = 'Done'
                 AND [System.ChangedDate] > '{yesterday}'
                 AND [System.AssignedTo] = '{username}'
+                AND [System.CreatedDate] > '{one_year_ago}'
             ) or (
                 [System.State] = 'In Progress'
                 AND [System.AssignedTo] = '{username}'
@@ -142,6 +146,7 @@ class Client:
             work_items = (self._get_work_item(int(res.id))
                           for res in wiql_results)
             for work_item in work_items:
+                print(work_item.fields['System.Title'])
                 # create child
                 child = self._task_builder.from_work_item(work_item)
 

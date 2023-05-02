@@ -1,6 +1,7 @@
-import asyncio
 import datetime
 import math
+import threading
+import traceback
 
 from azure.devops.connection import Connection
 from azure.devops.v5_1.work.models import TeamContext
@@ -66,7 +67,7 @@ class TaskBuilder():
 class Client:
 
     def __init__(self, collaborators):
-        self._colaborators = collaborators
+        self._collaborators = collaborators
 
         # Fill in with your personal access token and org URL
         personal_access_token = env.devops_token
@@ -118,7 +119,7 @@ class Client:
                 if work_item.fields['System.WorkItemType'] in PARENT_TYPES:
                     return work_item
 
-    async def _get_tasks_by_user(self, username):
+    def _get_tasks_by_user(self, username):
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
         project = env.project_id
         team = env.team_id
@@ -264,24 +265,40 @@ class Client:
 
         return results
 
-    async def _get_tasks(self):
-        task_map = {}
+    def _get_tasks(self):
+        # TODO: this is a hack to get around different thread contexts.
+        # it kinda sucks, but it works for now.
+        task_list = []
 
-        # gather a call for each collaborator
-        results = await asyncio.gather(*[
-            self._get_tasks_by_user(colaborator)
-            for colaborator in self._colaborators.keys()
-        ])
+        def _get_tasks_by_user(username, task_list):
+            try:
+                tasks = self._get_tasks_by_user(username)
+                task_list.append(tasks)
+            except Exception:
+                traceback.print_exc()
+
+        # create threads for each collaborator
+        threads = []
+        for collaborator in self._collaborators.keys():
+            t = threading.Thread(target=_get_tasks_by_user,
+                                 args=(collaborator, task_list))
+            threads.append(t)
+            t.start()
+
+        # wait for all threads to finish
+        for t in threads:
+            t.join()
 
         # merge all results into a single sorted task map
-        for collaborator, tasks in results:
+        task_map = {}
+        for collaborator, tasks in task_list:
             tasks = sorted(tasks, key=lambda task: task.id)
             task_map[collaborator] = tasks
 
         return task_map
 
     def get_tasks(self):
-        return asyncio.run(self._get_tasks())
+        return self._get_tasks()
 
     def get_total_effort(self):
         # this is hardcoded since it's very project specific for us.
@@ -354,8 +371,8 @@ class Client:
 
         # find num of collaborators where developer=true
         developers = [
-            colaborator for colaborator in self._colaborators.keys()
-            if self._colaborators[colaborator]['developer']
+            colaborator for colaborator in self._collaborators.keys()
+            if self._collaborators[colaborator]['developer']
         ]
         num_developers = len(developers)
 

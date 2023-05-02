@@ -1,3 +1,4 @@
 azure-devops==6.0.0b2
 python-telegram-bot==12.6.1
 python-dotenv==0.14.0
+discord.py==2.2.3

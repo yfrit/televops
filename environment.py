@@ -39,6 +39,7 @@ class Environment(metaclass=Singleton):
         self.sprint_items_query_id = self._validate('SPRINT_ITEMS_QUERY_ID')
         self.epic_items_query_id = self._validate('EPIC_ITEMS_QUERY_ID')
         self.telegram_token = self._validate('TELEGRAM_TOKEN')
+        self.discord_bot_token = self._validate('DISCORD_BOT_TOKEN')
         self.org_id = self._validate('ORGANIZATION_ID')
         self.project_id = self._validate('PROJECT_ID')
         self.team_id = self._validate('TEAM_ID')

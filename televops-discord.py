@@ -58,7 +58,7 @@ async def daily(ctx):
 
         # prepare error message
         error = build_error(tb)
-        msg_obj.edit(content=error)
+        await msg_obj.edit(content=error)
         return
 
     # send scope and effort info

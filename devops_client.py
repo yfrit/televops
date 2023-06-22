@@ -242,6 +242,8 @@ class Client:
                 days=math.ceil(days_left))
         else:
             projected_date = 'Indefinite'
+        total_count = done_count + not_done_count
+        completed = done_count / total_count if total_count > 0 else 0
 
         # calculate increased scope by matching created date with sprint start
         increased_scope = 0
@@ -254,7 +256,7 @@ class Client:
         results = {
             'done': done_count,
             'total': done_count + not_done_count,
-            'completed': done_count / (done_count + not_done_count),
+            'completed': completed,
             'projected_date': projected_date,
             'release_date': release_date,
             'increased_scope': increased_scope,

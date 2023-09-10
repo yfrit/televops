@@ -12,22 +12,14 @@ from environment import Environment
 from utils import force_format_timestamp
 
 # constants
-PARENT_TYPES = ['Product Backlog Item', 'Bug']
+PARENT_TYPES = ["Product Backlog Item", "Bug"]
 
 # load env
 env = Environment()
 
 
 class Task:
-
-    def __init__(self,
-                 id,
-                 name,
-                 owner,
-                 state,
-                 parent=None,
-                 effort=None,
-                 blocked=False):
+    def __init__(self, id, name, owner, state, parent=None, effort=None, blocked=False):
         self.id = id
         self.name = name
         self.owner = owner
@@ -37,35 +29,31 @@ class Task:
         self.blocked = blocked
 
     def __str__(self):
-        return f'Task {self.id}: {self.name} ({self.owner})'
+        return f"Task {self.id}: {self.name} ({self.owner})"
 
     def __repr__(self):
         return self.__str__()
 
 
-class TaskBuilder():
+class TaskBuilder:
     # TODO: even though this is here, there's a lot of direct access to API
     # fields in the code below. This should be refactored to use this class
     # instead.
     def from_work_item(self, work_item):
         wid = work_item.id
-        name = work_item.fields['System.Title']
-        owner = work_item.fields['System.AssignedTo']['displayName']
-        state = work_item.fields['System.State']
-        effort = work_item.fields.get('Microsoft.VSTS.Scheduling.Effort')
-        tags = work_item.fields.get('System.Tags')
-        blocked = tags and 'Blocked' in tags
+        name = work_item.fields["System.Title"]
+        owner = work_item.fields["System.AssignedTo"]["displayName"]
+        state = work_item.fields["System.State"]
+        effort = work_item.fields.get("Microsoft.VSTS.Scheduling.Effort")
+        tags = work_item.fields.get("System.Tags")
+        blocked = tags and "Blocked" in tags
 
-        return Task(id=wid,
-                    name=name,
-                    owner=owner,
-                    state=state,
-                    effort=effort,
-                    blocked=blocked)
+        return Task(
+            id=wid, name=name, owner=owner, state=state, effort=effort, blocked=blocked
+        )
 
 
 class Client:
-
     def __init__(self, collaborators):
         self._collaborators = collaborators
 
@@ -74,7 +62,7 @@ class Client:
         organization_url = f"https://dev.azure.com/{env.org_id}"
 
         # Create a connection to the org
-        credentials = BasicAuthentication('', personal_access_token)
+        credentials = BasicAuthentication("", personal_access_token)
         connection = Connection(base_url=organization_url, creds=credentials)
 
         # clients and controllers
@@ -107,7 +95,7 @@ class Client:
                     [Target].[System.Id] = {task_id}
             )
         MODE (Recursive, ReturnMatchingChildren)
-        """ # noqa
+        """  # noqa
         wiql_results = self._query_by_wiql(query, top=30).work_item_relations
 
         if wiql_results:
@@ -116,7 +104,7 @@ class Client:
             for res in wiql_results:
                 wid = res.target.id
                 work_item = self._get_work_item(wid)
-                if work_item.fields['System.WorkItemType'] in PARENT_TYPES:
+                if work_item.fields["System.WorkItemType"] in PARENT_TYPES:
                     return work_item
 
     def _get_tasks_by_user(self, username):
@@ -147,8 +135,7 @@ class Client:
         if wiql_results:
             # WIQL query gives a WorkItemReference with ID only
             # => we get the corresponding WorkItem from id
-            work_items = (self._get_work_item(int(res.id))
-                          for res in wiql_results)
+            work_items = (self._get_work_item(int(res.id)) for res in wiql_results)
             for work_item in work_items:
                 # create child
                 child = self._task_builder.from_work_item(work_item)
@@ -165,16 +152,13 @@ class Client:
     def _get_current_sprint(self):
         team_context = TeamContext(project=env.project_id, team=env.team_id)
         iteration = self._work_client.get_team_iterations(
-            team_context, timeframe='current')[0]
+            team_context, timeframe="current"
+        )[0]
         first_date = iteration.attributes.start_date.date()
         release_date = iteration.attributes.finish_date.date()
         path = iteration.path
 
-        return {
-            'first_date': first_date,
-            'release_date': release_date,
-            'path': path
-        }
+        return {"first_date": first_date, "release_date": release_date, "path": path}
 
     def get_current_scope(self):
         # this is hardcoded since it's very project specific for us
@@ -191,42 +175,41 @@ class Client:
         work_items = [self._get_work_item(int(res.id)) for res in results]
 
         for work_item in work_items:
-            state = work_item.fields['System.State']
-            if state == 'Done':
+            state = work_item.fields["System.State"]
+            if state == "Done":
                 # get completion dates and match them with sprint start date
-                closed_date_str = work_item.fields[
-                    'Microsoft.VSTS.Common.ClosedDate']
+                closed_date_str = work_item.fields["Microsoft.VSTS.Common.ClosedDate"]
                 closed_date = force_format_timestamp(closed_date_str)
                 closed_date_str = str(closed_date)
 
                 # store created dates from done items
                 created_date = force_format_timestamp(
-                    work_item.fields['System.CreatedDate'])
+                    work_item.fields["System.CreatedDate"]
+                )
                 created_dates.append(str(created_date))
 
                 # get effort
-                effort = work_item.fields.get(
-                    'Microsoft.VSTS.Scheduling.Effort')
+                effort = work_item.fields.get("Microsoft.VSTS.Scheduling.Effort")
                 completed_effort += effort if effort else 0
 
                 done_count += 1
             else:
                 # store created dates from not done items
                 created_date = force_format_timestamp(
-                    work_item.fields['System.CreatedDate'])
+                    work_item.fields["System.CreatedDate"]
+                )
                 created_dates.append(str(created_date))
 
                 # get effort
-                effort = work_item.fields.get(
-                    'Microsoft.VSTS.Scheduling.Effort')
+                effort = work_item.fields.get("Microsoft.VSTS.Scheduling.Effort")
                 remaning_effort += effort if effort else 0
 
                 not_done_count += 1
 
         # get sprint start date to make comparisons
         iteration = self._get_current_sprint()
-        first_date = iteration['first_date']
-        release_date = iteration['release_date']
+        first_date = iteration["first_date"]
+        release_date = iteration["release_date"]
 
         # get number of worked days
         today = datetime.date.today()
@@ -238,10 +221,9 @@ class Client:
 
             # calculate projected date
             days_left = not_done_count / average
-            projected_date = today + datetime.timedelta(
-                days=math.ceil(days_left))
+            projected_date = today + datetime.timedelta(days=math.ceil(days_left))
         else:
-            projected_date = 'Indefinite'
+            projected_date = "Indefinite"
         total_count = done_count + not_done_count
         completed = done_count / total_count if total_count > 0 else 0
 
@@ -254,15 +236,15 @@ class Client:
                 increased_scope += 1
 
         results = {
-            'done': done_count,
-            'total': done_count + not_done_count,
-            'completed': completed,
-            'projected_date': projected_date,
-            'release_date': release_date,
-            'increased_scope': increased_scope,
-            'completed_effort': completed_effort,
-            'remaning_effort': remaning_effort,
-            'total_effort': completed_effort + remaning_effort
+            "done": done_count,
+            "total": done_count + not_done_count,
+            "completed": completed,
+            "projected_date": projected_date,
+            "release_date": release_date,
+            "increased_scope": increased_scope,
+            "completed_effort": completed_effort,
+            "remaning_effort": remaning_effort,
+            "total_effort": completed_effort + remaning_effort,
         }
 
         return results
@@ -282,8 +264,9 @@ class Client:
         # create threads for each collaborator
         threads = []
         for collaborator in self._collaborators.keys():
-            t = threading.Thread(target=_get_tasks_by_user,
-                                 args=(collaborator, task_list))
+            t = threading.Thread(
+                target=_get_tasks_by_user, args=(collaborator, task_list)
+            )
             threads.append(t)
             t.start()
 
@@ -307,13 +290,11 @@ class Client:
         # the current epic is defined under the query id
         qid = env.epic_items_query_id
         results = self._wit_client.query_by_id(qid).work_item_relations
-        work_items = [
-            self._get_work_item(int(res.target.id)) for res in results
-        ]
+        work_items = [self._get_work_item(int(res.target.id)) for res in results]
 
         # get current sprint
         iteration = self._get_current_sprint()
-        current_iteration = iteration['path']
+        current_iteration = iteration["path"]
 
         epic_remaining_effort = 0
         epic_completed_effort = 0
@@ -321,24 +302,23 @@ class Client:
         sprint_completed_effort = 0
         blocked_effort = 0
         for work_item in work_items:
-            wtype = work_item.fields.get('System.WorkItemType')
+            wtype = work_item.fields.get("System.WorkItemType")
             if wtype in PARENT_TYPES:
-                state = work_item.fields.get('System.State')
+                state = work_item.fields.get("System.State")
                 effort = int(
-                    work_item.fields.get('Microsoft.VSTS.Scheduling.Effort',
-                                         0))
+                    work_item.fields.get("Microsoft.VSTS.Scheduling.Effort", 0)
+                )
                 # we use a default value of -1 to facilitate the casting
                 # and indicate the difference between a missing value
                 # and a value of 0
                 remaining_work = int(
-                    work_item.fields.get(
-                        'Microsoft.VSTS.Scheduling.RemainingWork', -1))
-                if state == 'Done':
+                    work_item.fields.get("Microsoft.VSTS.Scheduling.RemainingWork", -1)
+                )
+                if state == "Done":
                     # for done items, effort is considered completed
                     epic_completed_effort += effort
 
-                    iteration_path = work_item.fields.get(
-                        'System.IterationPath')
+                    iteration_path = work_item.fields.get("System.IterationPath")
                     if iteration_path == current_iteration:
                         sprint_completed_effort += effort
                 else:
@@ -351,8 +331,7 @@ class Client:
                         epic_completed_effort += burndown
 
                     # check if remaining work exists, add effort if not
-                    iteration_path = work_item.fields.get(
-                        'System.IterationPath')
+                    iteration_path = work_item.fields.get("System.IterationPath")
                     delta = effort if remaining_work == -1 else remaining_work
                     epic_remaining_effort += delta
                     if iteration_path == current_iteration:
@@ -360,21 +339,27 @@ class Client:
                         sprint_remaining_effort += delta
 
                     # check if the item is blocked
-                    tags = work_item.fields.get('System.Tags')
-                    if tags and 'Blocked' in tags:
+                    tags = work_item.fields.get("System.Tags")
+                    if tags and "Blocked" in tags:
                         blocked_effort += effort
 
         # get start and finish dates of the epic
-        epic = next((item for item in work_items
-                     if item.fields.get('System.WorkItemType') == 'Epic'),
-                    None)
-        start_date = epic.fields.get('Microsoft.VSTS.Scheduling.StartDate')
-        delivery_date = epic.fields.get('Microsoft.VSTS.Scheduling.TargetDate')
+        epic = next(
+            (
+                item
+                for item in work_items
+                if item.fields.get("System.WorkItemType") == "Epic"
+            ),
+            None,
+        )
+        start_date = epic.fields.get("Microsoft.VSTS.Scheduling.StartDate")
+        delivery_date = epic.fields.get("Microsoft.VSTS.Scheduling.TargetDate")
 
         # find num of collaborators where developer=true
         developers = [
-            colaborator for colaborator in self._collaborators.keys()
-            if self._collaborators[colaborator]['developer']
+            colaborator
+            for colaborator in self._collaborators.keys()
+            if self._collaborators[colaborator]["developer"]
         ]
         num_developers = len(developers)
 
@@ -384,37 +369,49 @@ class Client:
             today = datetime.date.today()
             remaining_weeks = (delivery_date - today).days / 7
             remaining_work_days = int(
-                remaining_weeks * (env.work_days_per_week * num_developers))
+                remaining_weeks * (env.work_days_per_week * num_developers)
+            )
         else:
-            raise Exception('Epic has no start or delivery date')
+            raise Exception("Epic has no start or delivery date")
 
         # calculate sprint velocity
-        sprint_start_date = iteration['first_date']
-        sprint_delivery_date = iteration['release_date']
+        sprint_start_date = iteration["first_date"]
+        sprint_delivery_date = iteration["release_date"]
         sprint_work_days = (sprint_delivery_date - sprint_start_date).days + 1
         sprint_total_weeks = sprint_work_days / 7
-        sprint_capacity = int(sprint_total_weeks *
-                              (env.work_days_per_week * num_developers))
+        sprint_capacity = int(
+            sprint_total_weeks * (env.work_days_per_week * num_developers)
+        )
 
         # calculate totals
         epic_total_effort = epic_completed_effort + epic_remaining_effort
         sprint_total_effort = sprint_completed_effort + sprint_remaining_effort
+        epic_percentage_effort = (
+            epic_completed_effort / epic_total_effort if epic_total_effort > 0 else 0
+        )
+        sprint_percentage_effort = (
+            sprint_completed_effort / sprint_total_effort
+            if sprint_total_effort > 0
+            else 0
+        )
+        epic_velocity_percentage = (
+            epic_remaining_effort / remaining_work_days
+            if remaining_work_days > 0
+            else 0
+        )
 
         return {
-            'epic_remaining_effort': epic_remaining_effort,
-            'epic_total_effort': epic_total_effort,
-            'epic_completed_effort': epic_completed_effort,
-            'epic_percentage_effort':
-            epic_completed_effort / epic_total_effort,
-            'sprint_total_effort': sprint_total_effort,
-            'sprint_completed_effort': sprint_completed_effort,
-            'sprint_percentage_effort':
-            sprint_completed_effort / sprint_total_effort,
-            'remaining_work_days': remaining_work_days,
-            'epic_velocity_percentage':
-            epic_remaining_effort / remaining_work_days,
-            'work_days_per_week': env.work_days_per_week,
-            'num_developers': num_developers,
-            'sprint_capacity': sprint_capacity,
-            'blocked_effort': blocked_effort
+            "epic_remaining_effort": epic_remaining_effort,
+            "epic_total_effort": epic_total_effort,
+            "epic_completed_effort": epic_completed_effort,
+            "epic_percentage_effort": epic_percentage_effort,
+            "sprint_total_effort": sprint_total_effort,
+            "sprint_completed_effort": sprint_completed_effort,
+            "sprint_percentage_effort": sprint_percentage_effort,
+            "remaining_work_days": remaining_work_days,
+            "epic_velocity_percentage": epic_velocity_percentage,
+            "work_days_per_week": env.work_days_per_week,
+            "num_developers": num_developers,
+            "sprint_capacity": sprint_capacity,
+            "blocked_effort": blocked_effort,
         }
